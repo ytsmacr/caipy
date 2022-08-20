@@ -7,6 +7,7 @@ import warnings
 import os
 import pickle
 import re
+import time
 
 from model_tools import *
 
@@ -48,7 +49,6 @@ OUTPUT:
 #-------------------------------------------------------------#
 
 # PROMPTS
-
 method_prompt = '''Do you want to run:
     [0] *ALL MODELS*
     [1] Ordinary Least Squares (OLS)
@@ -69,16 +69,6 @@ std_prompt = 'Should all variables follow the same modelling procedure? (set tes
 test_prompt = 'Do you want to use one of the folds as a test set? Otherwise all data used for training (y/n): '
 
 # REGRESSION STUFF
-
-#maximum number of components for PLS
-max_components = 30
-# number of values to test for LASSO, Ridge, ElasticNet, SVR
-num_params = 30
-# polynomial degree for SVR and kernel PCR
-poly_deg = 2
-# maximum number of neighbors for kNN
-max_neighbors = 40
-
 method_dict = {
     0:['OLS','OMP','LASSO','Ridge','ElasticNet','PLS','PCR','K-PCR','SVR-lin','SVR-py','RF','GBR','kNN'],
     1:['OLS'],
@@ -205,7 +195,20 @@ test_fold_list = []
 method_list = []
 var_list = []
 
+# get elapsed time rather than tqdm
+main_start = time.time()
+
 for var in var_to_run:
+    
+    # RESET MODEL PARAMETERS
+    #maximum number of components for PLS
+    max_components = 30
+    # number of values to test for LASSO, Ridge, ElasticNet, SVR
+    num_params = 30
+    # polynomial degree for SVR and kernel PCR
+    poly_deg = 2
+    # maximum number of neighbors for kNN
+    max_neighbors = 40
     
     print(f'\nRunning for {var}')
     fold_col = form.get_fold_col(var)
@@ -222,9 +225,14 @@ for var in var_to_run:
         while test_fold not in meta[fold_col].unique():
             print(f'{test_fold} not in list of available folds: {all_folds}')
             test_fold = int(input(f'Which fold should be the test fold? '))
-        data_dict = form.make_data_dict(var, fold_col, test_fold)
+        data_dict, min_samples = form.make_data_dict(var, fold_col, test_fold)
     else:
-        data_dict = form.make_data_dict(var, fold_col)
+        data_dict, min_samples = form.make_data_dict(var, fold_col)
+        
+    # update parameters if larger than min samples
+    max_components = min_samples if max_components > min_samples else max_components
+    num_params = min_samples if num_params > min_samples else num_params
+    max_neighbors = min_samples if max_neighbors > min_samples else max_neighbors
         
     if not standard:
         while True:
@@ -277,7 +285,10 @@ for var in var_to_run:
                'args':max_neighbors}
     }
     
-    for method in tqdm(methods_torun, desc='methods'):
+    # check length of time for all methods
+    sub_start = time.time()
+    
+    for method in methods_torun:
         
         # optimize models with CV
         print(f'\nPerforming CV for {method}:')
@@ -409,6 +420,10 @@ for var in var_to_run:
             rmsep_list.append('NA')
             r2_test_list.append('NA')
             adj_r2_test_list.append('NA')  
+            
+    # report elapsed time for variable
+    sub_end = time.time()
+    print(f'{var} took {round(sub_end-sub_start,1)} seconds to run')
     
 #----------------#
 # EXPORT RESULTS #
@@ -446,3 +461,7 @@ else:
     })
 
     results.to_csv(f'{outpath}\\modelling_train_test_results.csv', index=False)
+
+if len(var_to_run) > 1:
+    main_end = time.time()
+    print(f'All variables took {round((main_end-main_start)/60,1)} minutes to run')

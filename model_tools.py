@@ -128,6 +128,10 @@ class Format():
 
     # convert data to dict of train/test dfs per fold
     def make_data_dict(self, var, fold_col, test_fold=None):
+        
+        # find minimum number of samples in the folds, 
+        # to specify model params later
+        n_samples_list = []
 
         # remove test data if using it
         if test_fold:
@@ -147,11 +151,13 @@ class Format():
                                    (temp_meta[fold_col] != -1)].reset_index(drop=True)
             X_train = select_spectra(self.spectra, train_meta.pkey)
             y_train = train_meta[var].values
+            n_samples_list.append(len(y_train))
 
             # held-out data
             test_meta = temp_meta[temp_meta[fold_col] == fold].reset_index(drop=True)
             X_test = select_spectra(self.spectra, test_meta.pkey)
             y_test = test_meta[var].values
+            n_samples_list.append(len(y_train))
 
             # add datasets to dictionary
             data_dict[fold] = {'train_spectra':X_train,
@@ -159,7 +165,8 @@ class Format():
                                'test_spectra':X_test,
                                'test_metadata':y_test}
 
-        return data_dict
+        min_samples = min(n_samples_list)
+        return data_dict, min_samples
 
     # convert data to correct format for modelling
     def format_spectra_meta(self, var, fold_col, test_fold=None):
