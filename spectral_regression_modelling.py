@@ -130,13 +130,13 @@ spectra = pd.read_csv(spectra_path)
 axis = list(spectra['wave'].values)
 meta = pd.read_csv(meta_path)
 
-# make class instance for formatting
-form = Format(spectra, meta)
-
 # check data in same order
 check = list(spectra.columns[1:]) == list(meta['pkey'].values)
 if not check:
     raise ValueError('Spectra and metadata samples need to be in same order')
+    
+# make class instance for formatting
+form = Format(spectra, meta)
     
 # extract variables to be run
 var_to_run = [col for col in meta.columns if (col not in ['pkey', 'Sample Name', 'Sample_Name']) and ('Folds' not in col)]

@@ -60,7 +60,12 @@ def isfloat(num):
 # convert spectra df to np array for modelling
 def convert_spectra(spectra):
     
-    print('Warning: convert_spectra assumes the first column is the wavelength axis and ignores it')
+    first_col = spectra.columns[0]
+    
+    if first_col != 'wave':
+        cont = make_bool(input(f'Warning: convert_spectra assumes the first column is the wavelength axis and ignores it. The first column of your data is {first_col}. Continue?'))
+        if not cont:
+            raise ValueError('Aborting')
     
     spec_list = []
     for column in spectra.columns[1:]:
@@ -157,7 +162,7 @@ class Format():
             test_meta = temp_meta[temp_meta[fold_col] == fold].reset_index(drop=True)
             X_test = select_spectra(self.spectra, test_meta.pkey)
             y_test = test_meta[var].values
-            n_samples_list.append(len(y_train))
+            n_samples_list.append(len(y_test))
 
             # add datasets to dictionary
             data_dict[fold] = {'train_spectra':X_train,
