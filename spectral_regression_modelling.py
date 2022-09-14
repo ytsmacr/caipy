@@ -324,9 +324,6 @@ for var in var_to_run:
             if method == 'SVR-lin':
                 coef_list = list(model.coef_[0])
                 intercept = model.intercept_[0]
-            elif method == 'PLS':
-                coef_list = list(model.coef_)
-                intercept = (model._y_mean - np.dot(model._x_mean, model.coef_))[0]
             else:
                 coef_list = list(model.coef_)
                 intercept = model.intercept_
