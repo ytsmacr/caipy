@@ -17,7 +17,7 @@ from sklearn.pipeline import Pipeline
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 19 August 2022
+Last updated 14 September 2022
 '''
 
 # STANDALONE FUNCTIONS #
@@ -352,9 +352,9 @@ class Model():
             
         return epsilon, rmsecv, model
     
-    def run_PCR(self):
+    def run_PCR_linear(self):
         
-        print('PCR does not optimize')
+        print('PCR-lin does not optimize')
         # removed component range because different thing
         model = Pipeline([('PCA', PCA()), ('linear', LinearRegression())])
         rmsecv = Model.run_CV(self, model)
@@ -363,10 +363,10 @@ class Model():
             
         return 'NA', rmsecv, model
     
-    def run_kernel_PCR(self, poly_deg):
+    def run_PCR_poly(self, poly_deg):
         
-        print('K-PCR does not optimize')
-        print(f'Currently using a polynomial degree of {poly_deg}')
+        print('PCR-py does not optimize')
+        #print(f'Currently using a polynomial degree of {poly_deg}')
 
         pca = KernelPCA(kernel='poly', degree=poly_deg)
         model = Pipeline([('PCA',pca), ('linear', LinearRegression())])

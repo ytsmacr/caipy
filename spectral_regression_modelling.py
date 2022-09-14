@@ -13,7 +13,7 @@ from model_tools import *
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 19 August 2022
+Last updated 14 September 2022
 
 Train spectral calibration standards with PLS and/or LASSO modelling. 
 Optionally use one fold of standards as test set.
@@ -57,10 +57,10 @@ method_prompt = '''Do you want to run:
     [4] Ridge regression
     [5] ElasticNet
     [6] Partial Least Squares (PLS)
-    [7] Principal Components Regression (PCR)
-    [8] kernel-PCR (K-PCR)
-    [9] linear Support Vector Regression (SVR-lin)
-    [10] polynomial SVR (SVR-py)
+    [7] Principal Components Regression with linear PCA kernel (PCR-lin)
+    [8] Principal Components Regression with linear PCA kernel (PCR-py)
+    [9] Support Vector Regression with 2nd degree polynomial kernel (SVR-lin)
+    [10] Support Vector Regression with 2nd degree polynomial kernel (SVR-py)
     [11] Random Forest regressor (RF)
     [12] Gradient Boosting regressor (GBR)
     [13] k-Nearest Neighbors regressor (kNN)
@@ -70,15 +70,15 @@ test_prompt = 'Do you want to use one of the folds as a test set? Otherwise all 
 
 # REGRESSION STUFF
 method_dict = {
-    0:['OLS','OMP','LASSO','Ridge','ElasticNet','PLS','PCR','K-PCR','SVR-lin','SVR-py','RF','GBR','kNN'],
+    0:['OLS','OMP','LASSO','Ridge','ElasticNet','PLS','PCR-lin','PCR-py','SVR-lin','SVR-py','RF','GBR','kNN'],
     1:['OLS'],
     2:['OMP'],
     3:['LASSO'],
     4:['Ridge'],
     5:['ElasticNet'],
     6:['PLS'],
-    7:['PCR'],
-    8:['K-PCR'],
+    7:['PCR-lin'],
+    8:['PCR-py'],
     9:['SVR-lin'],
     10:['SVR-py'],
     11:['RF'],
@@ -87,7 +87,7 @@ method_dict = {
 }
 
 all_methods = method_dict.keys()
-non_linear_methods = ['SVR-py', 'PCR', 'K-PCR', 'RF', 'GBR', 'kNN']
+non_linear_methods = ['SVR-py', 'PCR-lin', 'PCR-py', 'RF', 'GBR', 'kNN']
 #-------------------------------------------------------------#
 
 #-------------------#
@@ -269,9 +269,9 @@ for var in var_to_run:
                    'args':num_params},
         'SVR-py':{'func':modelling.run_SVR_poly,
                   'args':(num_params, poly_deg)},
-        'PCR':{'func':modelling.run_PCR,
+        'PCR-lin':{'func':modelling.run_PCR_linear,
                'args':None},
-        'K-PCR':{'func':modelling.run_kernel_PCR,
+        'PCR-py':{'func':modelling.run_PCR_poly,
                  'args':poly_deg},
         'OMP':{'func':modelling.run_OMP,
                'args':None},
