@@ -14,7 +14,7 @@ from model_tools import check_csv, make_bool, select_spectra
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 14 September 2022
+Last updated 15 September 2022
 
 Script to make PLS2 models, where one model predicts multiple y variables. 
 If only modelling for one variable, PLS1 regression is included in spectral_regression_modelling.py
@@ -142,8 +142,8 @@ print('\nCross-validating')
 overall_cv_results = {'average':[]}
 for var in var_to_run:
     overall_cv_results[var] = []
-all_var = list(overall_cv_results.keys())
-n_var = len(all_var)
+var_names = list(overall_cv_results.keys())
+n_var = len(var_names)
     
 def run_CV_PLS2(model):
     
@@ -199,7 +199,7 @@ for n_components in tqdm(component_range):
     
 # cumulate best results per variable
 best_results = dict()
-for var in all_var:
+for var in var_names:
     results = dict(zip(overall_cv_results[var], component_range))
     min_rmsecv = min(overall_cv_results[var])
     best_component = results[min_rmsecv]
@@ -213,7 +213,7 @@ fig, axes = plt.subplots(nrows=n_var,
 for i in np.arange(n_var):
     
     # get variable name and best results
-    var = all_var[i]
+    var = var_names[i]
     best_component = best_results[var][0]
     best_rmsecv = best_results[var][1]
     
@@ -232,6 +232,8 @@ axes[0].set_title('RMSE-CV', fontsize=14)
 axes[n_var-1].set_xlabel('Number of components', fontsize=12)  
 plt.savefig(f'{outpath}\\RMSECV_result_comparison.jpg', dpi=600)
 plt.savefig(f'{outpath}\\RMSECV_result_comparison.eps', dpi=600)
+plt.tight_layout()
+# show plot
 plt.show(block=False)
 
 # choose model to train on
@@ -239,3 +241,27 @@ component_to_use = int(input('Which component model should be used for training?
 
 # close figure
 plt.close()
+
+#-------------#
+# TRAIN MODEL #
+#-------------#
+# format training data
+train_meta = meta[(meta[fold_col] != -1) &
+                  (~meta[fold_col].isnull())]
+y_train = train_meta[var_to_run].values
+train_names = train_meta['pkey'].values
+X_train = select_spectra(spectra, train_names)
+# make model
+model = PLSRegression(n_components = component_to_use, scale=False)
+model.fit(X_train, y_train)
+# export
+pickle.dump(model, open(f"{outpath}\\PLS2_model_{all_var.replace(', ','_')}.asc", 'wb'), protocol=0)
+
+# CHANGE INTO FILE w header of overall model info, then individual, then coeffs
+coef_df = pd.DataFrame(model.coef_)
+coef_df.columns = [f'{var}_coeffs' for var in var_to_run]
+coef_df.insert(0,'wave',axis)
+intercept_row = ['INTERCEPT']
+intercept_row.extend(list(model.intercept_))
+intercepts = pd.DataFrame([intercept_row], columns=coef_df.columns)
+coef_df = pd.concat([intercepts, coef_df])

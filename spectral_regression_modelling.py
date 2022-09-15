@@ -13,7 +13,7 @@ from model_tools import *
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 14 September 2022
+Last updated 15 September 2022
 
 Train spectral calibration standards with PLS and/or LASSO modelling. 
 Optionally use one fold of standards as test set.
@@ -324,6 +324,9 @@ for var in var_to_run:
             if method == 'SVR-lin':
                 coef_list = list(model.coef_[0])
                 intercept = model.intercept_[0]
+            elif method == 'PLS':
+                coef_list = list(model.coef_)
+                intercept = model.intercept_[0]                
             else:
                 coef_list = list(model.coef_)
                 intercept = model.intercept_
@@ -420,7 +423,7 @@ for var in var_to_run:
             
     # report elapsed time for variable
     sub_end = time.time()
-    print(f'{var} took {round(sub_end-sub_start,1)} seconds to run')
+    print(f'\n{var} took {round(sub_end-sub_start,1)} seconds to run')
     
 #----------------#
 # EXPORT RESULTS #
@@ -461,4 +464,4 @@ else:
 
 if len(var_to_run) > 1:
     main_end = time.time()
-    print(f'All variables took {round((main_end-main_start)/60,1)} minutes to run')
+    print(f'\nAll variables took {round((main_end-main_start)/60,1)} minutes to run')

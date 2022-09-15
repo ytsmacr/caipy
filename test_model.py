@@ -10,7 +10,7 @@ from model_tools import check_csv, check_asc, make_bool, convert_spectra, Plot
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 15 August 2022
+Last updated 15 September 2022
 
 Test .asc sklearn model on input data. Returns .csv of predicted values.
 Optionally include metadata file for test samples to generate:
@@ -62,11 +62,10 @@ model = pickle.load(open(model_file, 'rb'))
 spectra = pd.read_csv(spectra_file)
 if have_comps:
     meta = pd.read_csv(meta_file)
-    
-# check data in same order
-check = list(spectra.columns[1:]) == list(meta['pkey'].values)
-if not check:
-    raise ValueError('Spectra and metadata samples need to be in same order')
+    # check data in same order
+    check = list(spectra.columns[1:]) == list(meta['pkey'].values)
+    if not check:
+        raise ValueError('Spectra and metadata samples need to be in same order')
 
 # format data
 X_test = convert_spectra(spectra)
