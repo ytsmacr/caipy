@@ -11,45 +11,51 @@ from matplotlib import pyplot as plt
 import matplotlib.ticker as mticker
 from sklearn.cross_decomposition import PLSRegression
 from model_tools import check_csv, make_bool, select_spectra
+import time
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 15 September 2022
+Last updated 16 September 2022
 
 Script to make PLS2 models, where one model predicts multiple y variables. 
-If only modelling for one variable, PLS1 regression is included in spectral_regression_modelling.py
+If only modelling for one variable, PLS1 regression is included in
+spectral_regression_modelling.py
 '''
 
 #-------------------#
 # INPUT INFORMATION #
 #-------------------#
 # data folder
-data_folder = input('Folder path containing data: ')
+in_prompt = 'Folder path containing data: '
+data_folder = input(in_prompt)
 while not os.path.exists(data_folder):
     print(f'Error: path {data_folder} does not exist\n')
-    data_folder = input('Folder path containing data: ')
+    data_folder = input(in_prompt)
     
 all_files = os.listdir(data_folder)
 
 # spectra
-spectra_file = check_csv(input('Spectra filename: '))
+spectra_prompt = 'Spectra filename: '
+spectra_file = check_csv(input(spectra_prompt))
 while spectra_file not in all_files:
     print(f'Error: file {spectra_file} not in data folder\n')
-    spectra_file = check_csv(input('Spectra filename: '))
+    spectra_file = check_csv(input(spectra_prompt))
 spectra_path = os.path.join(data_folder, spectra_file)
 
 # metadata
-meta_file = check_csv(input('Metadata filename: '))
+meta_prompt = 'Metadata filename: '
+meta_file = check_csv(input(meta_prompt))
 while meta_file not in all_files:
     print(f'Error: file {meta_file} not in data folder\n')
-    meta_file = check_csv(input('Metadata filename: '))
+    meta_file = check_csv(input(meta_prompt))
 meta_path = os.path.join(data_folder, meta_file)
 
 # folder to export results to
-outpath = input('File path to export results: ')
+out_prompt = 'Folder path to export results: '
+outpath = input(out_prompt)
 while not os.path.exists(outpath):
     print(f'Error: path {outpath} does not exist\n')
-    outpath = input('File path to export results: ')
+    outpath = input(out_prompt)
     
 # define maximum number of components
 default_max_components = 30
@@ -58,6 +64,8 @@ max_components = int(input('Maximum number of PLS components (default=30): ') or
 #----------------#
 # PREP PROCEDURE #
 #----------------#
+# keep track of elapsed time
+start = time.time()
 # read in data
 print('\nLoading data')
 spectra = pd.read_csv(spectra_path)
@@ -67,7 +75,7 @@ meta = pd.read_csv(meta_path)
 # check has folds column
 fold_col = 'Folds'
 if fold_col not in meta.columns:
-    raise ValueError(f"Metadata must have a universal '{fold_col}' column assigned to split the data for cross-validation")
+    raise ValueError(f"Metadata must have a universal '{fold_col}' column assigned to split the data for cross-validation. You can use the `stratify_samples.py` program to do this.")
 
 # check data in same order
 check = list(spectra.columns[1:]) == list(meta['pkey'].values)
@@ -79,7 +87,7 @@ var_to_run = [col for col in meta.columns if (col not in ['pkey', 'Sample Name',
 if len(var_to_run) == 1:
     raise ValueError(f'Only one variable, {var_to_run[0]}, is in the metadata. PLS2 requires multiple y variables.')
 all_var = ', '.join(var_to_run)
-print('Identified variables to be predicted by the model:', all_var)
+print('Identified variables to predict:', all_var)
 
 # remove samples without compositions for all variables
 if meta.isnull().values.any():
@@ -230,9 +238,10 @@ for i in np.arange(n_var):
 
 axes[0].set_title('RMSE-CV', fontsize=14)
 axes[n_var-1].set_xlabel('Number of components', fontsize=12)  
-plt.savefig(f'{outpath}\\RMSECV_result_comparison.jpg', dpi=600)
-plt.savefig(f'{outpath}\\RMSECV_result_comparison.eps', dpi=600)
+# save plot
 plt.tight_layout()
+plt.savefig(f"{outpath}\\PLS2_RMSECV_plots_{all_var.replace(', ','_')}.jpg", dpi=600)
+plt.savefig(f"{outpath}\\PLS2_RMSECV_plots_{all_var.replace(', ','_')}.eps", dpi=600)
 # show plot
 plt.show(block=False)
 
@@ -257,11 +266,83 @@ model.fit(X_train, y_train)
 # export
 pickle.dump(model, open(f"{outpath}\\PLS2_model_{all_var.replace(', ','_')}.asc", 'wb'), protocol=0)
 
-# CHANGE INTO FILE w header of overall model info, then individual, then coeffs
+#----------------#
+# PRED v. ACTUAL #
+#----------------#
+# predicted
+train_preds = pd.DataFrame(model.predict(X_train))
+train_preds.columns = [f'{var}_pred' for var in var_to_run]
+# actual
+actual_vals = pd.DataFrame(y_train)
+actual_vals.columns = [f'{var}_actual' for var in var_to_run]
+# merge
+train_pred_true = actual_vals.merge(train_preds, right_index=True, left_index=True)
+# reorder
+cols = list(train_pred_true.columns)
+cols.sort()
+train_pred_true = train_pred_true[cols]
+
+train_pred_true.to_csv(f"{outpath}\\PLS2_train_pred_true_{all_var.replace(', ','_')}.csv", index=False)
+
+train_rmsecv_list = []
+train_rmsec_list = []
+train_r2_list = []
+train_adj_r2_list = []
+
+#--------------#
+# COEFFICIENTS #
+#--------------#
 coef_df = pd.DataFrame(model.coef_)
 coef_df.columns = [f'{var}_coeffs' for var in var_to_run]
 coef_df.insert(0,'wave',axis)
-intercept_row = ['INTERCEPT']
-intercept_row.extend(list(model.intercept_))
-intercepts = pd.DataFrame([intercept_row], columns=coef_df.columns)
-coef_df = pd.concat([intercepts, coef_df])
+coef_df.to_csv(f"{outpath}\\PLS2_coeff_{all_var.replace(', ','_')}.csv", index=False)
+
+#------------#
+# MODEL INFO #
+#------------#
+# get results for each variable
+for var in var_to_run:
+    
+    # -2 to offset bc starts at 2
+    rmsecv = overall_cv_results[var][component_to_use-2]
+    
+    actual = train_pred_true[f'{var}_actual']
+    pred = train_pred_true[f'{var}_pred']
+    
+    rmsec = sqrt(mean_squared_error(actual, pred))
+    r2 = r2_score(actual, pred)
+    adj_r2 = 1 - (1-r2)*(len(train_pred_true) - 1) / (len(train_pred_true) - (train_pred_true.shape[1] - 1) - 1)
+    
+    train_rmsecv_list.append(rmsecv)
+    train_rmsec_list.append(rmsec)
+    train_r2_list.append(r2)
+    train_adj_r2_list.append(adj_r2)
+
+variable_info = pd.DataFrame({
+    'Variable' : var_to_run,
+    'Model intercept' : list(model.intercept_),
+    'RMSE-CV' : train_rmsecv_list,
+    'RMSE-C' : train_rmsec_list,
+    'R2' : train_r2_list,
+    'Adjusted R2' : train_adj_r2_list
+})
+
+# overall model info
+model_info = f'''*PLS2 Model Information*
+
+Predicted variables:,{all_var.replace(',', '')}
+Number of standards:,{len(y_train)}
+Number of model components:,{component_to_use}
+Average RMSE-CV:,{round(mean(train_rmsecv_list),3)}
+Average RMSE-C:,{round(mean(train_rmsec_list),3)}
+Average R2:,{round(mean(train_r2_list),3)}
+Average adjusted R2:,{round(mean(train_adj_r2_list),3)}
+
+'''
+# export
+with open(f"{outpath}\\PLS2_model_info_{all_var.replace(', ','_')}.csv", 'a', newline='\n') as file:
+    file.write(model_info)
+    variable_info.to_csv(file, index=False)
+    
+end = time.time()
+print(f'\nCompleted in {round((end-start)/60,1)} minutes')

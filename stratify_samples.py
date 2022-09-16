@@ -6,16 +6,22 @@ from model_tools import check_csv
 
 '''
 Code by Cai Ytsma (ytsmacr@gmail.com)
-Last updated 27/07/2022
+Last updated 16 September 2022
 
 This code takes stratifies samples into a set number of folds, 
-grouping by sample name and sorting by metadata value
+grouping by sample name and sorting by metadata value.
+It makes a fold column specific to each variable ('{variable}_Folds') 
+using this method.
+
+There is also a generic 'Folds' column made for samples with 
+compositions for all variables. To calculate this one, it
+takes the sum of all values and sorts by that value.
 
 Input file format:
 'pkey', 'Sample_Name' (to group by), {variable1}, {variable2}, etc.
 
 Output file format:
-'pkey', 'Sample_Name', {variable1}, '{variable1}_Folds', etc.
+'pkey', 'Sample_Name', 'Folds', {variable1}, '{variable1}_Folds', etc.
 '''
 
 # input information
@@ -33,6 +39,15 @@ for c in ['pkey', 'Sample_Name']:
         raise ValueError(f"Error: column '{c}' must exist")
 
 var_list = [c for c in meta.columns if c not in ['index', 'pkey', 'Sample_Name']]
+        
+# make sum column
+meta['sum'] = meta[var_list].sum(axis=1)
+# assign NA if any values are missing
+rows_w_na = list(meta[meta.isna().any(axis=1)]['index'])
+for row in rows_w_na:
+    meta.loc[row,'sum'] = np.nan
+# add to those to run for 
+var_list.append('sum')
 
 for var in var_list:
 
@@ -71,6 +86,10 @@ for var in var_list:
     
 meta = meta.sort_values('index').reset_index(drop=True)
 meta.drop(columns='index', inplace=True)
+
+# rename sum_Folds and drop sum column
+meta['Folds'] = meta['sum_Folds']
+meta.drop(columns=['sum','sum_Folds'], inplace=True)
 
 folder = '\\'.join(meta_file.split('\\')[:-1])
 filename = meta_file.split('\\')[-1][:-4]
