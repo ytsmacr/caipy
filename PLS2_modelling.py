@@ -10,12 +10,12 @@ from tqdm import tqdm
 from matplotlib import pyplot as plt
 import matplotlib.ticker as mticker
 from sklearn.cross_decomposition import PLSRegression
-from model_tools import check_csv, make_bool, select_spectra
+from model_tools import check_csv, make_bool, select_spectra, get_first_local_minimum
 import time
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 16 September 2022
+Last updated 21 September 2022
 
 Script to make PLS2 models, where one model predicts multiple y variables. 
 If only modelling for one variable, PLS1 regression is included in
@@ -164,7 +164,7 @@ def run_CV_PLS2(model):
     cv_results = {'average':[]}
     for var in var_to_run:
         cv_results[var] = []
-        
+    
     for fold in list(data_dict.keys()):
 
         # get data
@@ -172,6 +172,8 @@ def run_CV_PLS2(model):
         X_test = data_dict[fold]['test_spectra']
         y_train = data_dict[fold]['train_metadata']
         y_test = data_dict[fold]['test_metadata']
+        
+        n_samples_list.extend([len(y_train), len(y_test)])
 
         # run model
         model.fit(X_train, y_train)
@@ -207,9 +209,9 @@ for n_components in tqdm(component_range):
     
 # cumulate best results per variable
 best_results = dict()
-for var in var_names:
+for var in var_to_run+['average']:
     results = dict(zip(overall_cv_results[var], component_range))
-    min_rmsecv = min(overall_cv_results[var])
+    min_rmsecv = get_first_local_minimum(overall_cv_results[var])
     best_component = results[min_rmsecv]
     best_results[var] = [best_component, min_rmsecv]
 
@@ -231,7 +233,7 @@ for i in np.arange(n_var):
     # line
     axes[i].plot(component_range, overall_cv_results[var])
     # best point
-    axes[i].plot(best_component, best_rmsecv, color='red', marker='o')
+    axes[i].plot(best_component, best_rmsecv, color='orange', marker='o')
     # label
     axes[i].annotate(var, xy=(0.98, 0.8), ha='right', xycoords='axes fraction', fontsize=12)
     axes[i].xaxis.set_major_locator(mticker.MaxNLocator(integer=True))
@@ -246,7 +248,7 @@ plt.savefig(f"{outpath}\\PLS2_RMSECV_plots_{all_var.replace(', ','_')}.eps", dpi
 plt.show(block=False)
 
 # choose model to train on
-component_to_use = int(input('Which component model should be used for training? (refer to figure, default = best average): ') or best_results['average'][0])
+component_to_use = int(input('Which component model should be used for training? (refer to figure, default=best average): ') or best_results['average'][0])
 
 # close figure
 plt.close()

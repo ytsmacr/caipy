@@ -17,11 +17,14 @@ from sklearn.pipeline import Pipeline
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 14 September 2022
+Last updated 21 September 2022
+
+Helper functions and classes used by other programs in auto-modelling.
 '''
 
+##########################################
 # STANDALONE FUNCTIONS #
-
+##########################################
 # check format of input .asc filename
 def check_asc(filename):
 
@@ -107,6 +110,27 @@ def get_max(value, buffer=0.1):
         value = 0
 
     return value
+
+# for choosing best parameter during CV
+def get_first_local_minimum(li):
+    
+    min = li[0]
+
+    for i in li[1:]:
+        
+        if i < min:
+            min = i
+            
+        elif i > min:
+            return min
+        
+        elif i == min:
+            continue
+    
+    # in case the last point is the lowest
+    return min
+
+##########################################
 
 class Format():
     
