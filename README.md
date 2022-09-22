@@ -1,6 +1,6 @@
 # Auto-modelling
 ### by Cai Ytsma (cai@caiconsulting.co.uk)
-Programs to prepare, train, and test datasets for multivariate regression. Designed for spectroscopy data. All algorithms from [scikit-learn](https://scikit-learn.org/stable/index.html).
+Programs to format, train, and test datasets for multivariate regression. Designed for spectroscopy data. All machine learning algorithms from [scikit-learn](https://scikit-learn.org/stable/index.html).
 
 ## Setup
 If you don't have Anaconda already, you can [download it for free](anaconda.com).
@@ -23,7 +23,7 @@ Assigns *k* folds to input data by sorting samples by abundance per variable, gr
 ##### Input prompt
 - metadata .csv file path
 ##### Output
-- metadata .csv file with new `{var}_Folds` column per variable and `_stratified` appended to original filename
+- metadata .csv file with new `{var}_Folds` column per variable, an overall `Folds` column for those samples with values for all variables (e.g., to be used by `PLS2_modelling`), and `_stratified` appended to original filename
 
 ### spectral_regression_modelling.py
 The main program, this prompts the user for the input spectra and metadata (example datasets in `\example data`), automatically identifies relevant variables to calibrate, and prompts user to specify which regression models to train with. Users can optionally assign one of the folds as a test dataset. The model and test set choices can be standardized for all variables or chosen per variable. The program automatically optimizes models, where possible, using a custom grid search and trains on the optimum model per method.  Once trained, the program also outputs predicted versus values as a .csv and scatter plot. For linear models, coefficients are exported as a .csv and a plot of their weights over an example spectrum.
@@ -70,10 +70,24 @@ Merges result files `from spectral_regression_modelling.py` contained within sub
 ##### Output
 - Compiled .csv with `compiled_` appended to beginning of filename
 
+### PLS2_modelling.py
+A program that runs only PLS2 regression, which predict multiple variables in one model. File formats match `spectral_regression_modelling`, except that all variable columns in the metadata file will be predicted by the model. The user can see the results of cross-validation per variable as well as the averaged result to decide which PLS2 component to choose for the overall model.
+#### Input prompts
+- Folder path
+- Spectra file name
+- Metadata file name
+- Maximum number of PLS components (default=30)
+#### Outputs 
+- Comparison plots of cross-validation results per variable and for the average `PLS2_RMSECV_plots_{variables}.jpg`
+- Single PLS2 model with format `PLS2_model_{variables}.asc`
+- Training results for overall model and each variable `PLS2_train_results_{variables}.csv`
+- Predicted vs. true values `PLS2_train_pred_true_{variables}.csv` and plots `{variable}_PLS2_pred_true_plot.jpg` and `.eps`
+
 ### model_tools.py
 Helper file that contains many of the functions used by the above programs.
 
 ## Calibration models
+Descriptions from Dyar et al. (XXX)
 ### Linear regressions
 - [Ordinary Least Squares (OLS)](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LinearRegression.html)
 - [Orthogonal Matching Pursuit (OMP)](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.OrthogonalMatchingPursuit.html)
