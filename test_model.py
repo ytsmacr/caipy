@@ -10,7 +10,7 @@ from model_tools import check_csv, check_asc, make_bool, convert_spectra, Plot
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 15 September 2022
+Last updated 22 September 2022
 
 Test .asc sklearn model on input data. Returns .csv of predicted values.
 Optionally include metadata file for test samples to generate:
@@ -26,36 +26,41 @@ Metadata file format:
 
 # GET FILE INFORMATION
 # model
-model_file = check_asc(input('Model file path: (e.g. C:\Documents\SiO2_model.asc) '))
+model_prompt = 'Model file path: (e.g. C:\Documents\SiO2_model.asc) '
+model_file = check_asc(input(model_prompt))
 while not os.path.exists(model_file):
     print(f'Error: path {model_file} does not exist')
-    model_file = input('Model file path: (e.g. C:\Documents\SiO2_model.asc) ')
+    model_file = check_asc(input(model_prompt))
 
 print('\n***REMINDER***\nTest data should be processed identically to how training data were processed\n')
 
 # spectra
-spectra_file = check_csv(input('Test spectra file path: (e.g. C:\Documents\spectra.csv) '))
+spectra_prompt = 'Test spectra file path: (e.g. C:\Documents\spectra.csv) '
+spectra_file = check_csv(input(spectra_prompt))
 while not os.path.exists(spectra_file):
     print(f'Error: path {spectra_file} does not exist')
-    spectra_file = check_csv(input('Test spectra file path: (e.g. C:\Documents\spectra.csv) '))
+    spectra_file = check_csv(input(spectra_prompt))
 
 # have compositions for test samples?
-have_comps = make_bool(input('Do you have compositions for these samples (y/n): ').lower())
+comps_prompt = 'Do you have compositions for these samples (y/n): '
+have_comps = make_bool(input(comps_prompt).lower())
 while have_comps == 'error':
         print('Error: Input needs to be either y or n')
-        have_comps = make_bool(input('Do you have compositions for these samples (y/n): ').lower())
+        have_comps = make_bool(input(comps_prompt).lower())
 # if so, get comps
 if have_comps:
-    meta_file = check_csv(input('Test metadata file path: (e.g. C:\Documents\metadata.csv) '))
+    comps_prompt = 'Test metadata file path: (e.g. C:\Documents\metadata.csv) '
+    meta_file = check_csv(input(comps_prompt))
     while not os.path.exists(meta_file):
         print(f'Error: path {meta_file} does not exist')
-        meta_file = check_csv(input('Test metadata file path: (e.g. C:\Documents\metadata.csv) '))
+        meta_file = check_csv(input(comps_prompt))
         
 # folder to export results to
-outpath = input('File path to export results: ')
+out_prompt = 'File path to export results: '
+outpath = input(out_prompt)
 while not os.path.exists(outpath):
     print(f'Error: path {outpath} does not exist\n')
-    outpath = input('File path to export results: ')
+    outpath = input(out_prompt)
     
 # load files
 model = pickle.load(open(model_file, 'rb'))
@@ -74,7 +79,7 @@ test_pred = model.predict(X_test)
 
 # get variable and model information from filename if possible
 model_name = model_file.split('\\')[-1]
-if re.match('.+_.+_model.asc$', model_name):
+if re.match('.+_.+_model\.asc$', model_name):
     var = model_name.split('_')[0]
 else:
     var = input('Error: Could not extract variable name from model filename.\nWhat is the relevant variable? ')
@@ -85,9 +90,12 @@ else:
     method = input('Error: Could not extract regression method from model filename.\nWhat is the relevant method? ')
     
 # make df of results
+actual_col = f'{var}_actual'
+pred_col = f'{var}_pred'
+
 pred_df = pd.DataFrame({
     'pkey':spectra.columns[1:],
-    f'predicted {var}':list(test_pred.flatten())
+    pred_col:list(test_pred.flatten())
 })
 
 if not have_comps:
@@ -108,18 +116,18 @@ else:
     for option in ['Sample_Name', 'Sample Name']:
         if option in meta.columns:
             cols_to_add = ['pkey', var, option]
-            final_cols = ['pkey', option, f'predicted {var}', f'actual {var}']
+            final_cols = ['pkey', option, pred_col, actual_col]
 
     pred_true = pred_df.merge(meta[cols_to_add], how='left', on='pkey')
-    pred_true.rename(columns={var:f'actual {var}'}, inplace=True)
+    pred_true.rename(columns={var:actual_col}, inplace=True)
     pred_true = pred_true[final_cols]
     
     # RMSE-P
-    rmsep = sqrt(mean_squared_error(pred_true[f'actual {var}'],
-                                    pred_true[f'predicted {var}']))
+    rmsep = sqrt(mean_squared_error(pred_true[actual_col],
+                                    pred_true[pred_col]))
     # R2
-    r2 = r2_score(pred_true[f'actual {var}'],
-                  pred_true[f'predicted {var}'])
+    r2 = r2_score(pred_true[actual_col],
+                  pred_true[pred_col])
     # adjusted r2
     adj_r2 = 1 - (1-r2)*(len(pred_true) - 1) / (len(pred_true) - (pred_true.shape[1] - 1) - 1)
     print(f'\n\tRMSE-P: {round(rmsep,3)}    R2: {round(r2,3)}    Adjusted R2: {round(adj_r2,3)}\n')

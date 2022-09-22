@@ -17,7 +17,7 @@ from sklearn.pipeline import Pipeline
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 21 September 2022
+Last updated 22 September 2022
 
 Helper functions and classes used by other programs in auto-modelling.
 '''
@@ -66,7 +66,7 @@ def convert_spectra(spectra):
     first_col = spectra.columns[0]
     
     if first_col != 'wave':
-        cont = make_bool(input(f'Warning: convert_spectra assumes the first column is the wavelength axis and ignores it. The first column of your data is {first_col}. Continue?'))
+        cont = make_bool(input(f'Warning: convert_spectra assumes the first column is the wavelength axis and ignores it. The first column of your data is {first_col}. Continue? (y/n):'))
         if not cont:
             raise ValueError('Aborting')
     
@@ -552,8 +552,8 @@ class Plot():
     # predicted vs true scatter plot with 1:1 line
     def pred_true(df, var, method, type, rmse, adj_r2, path):
         
-        actual_col = [col for col in df.columns if 'actual' in col][0]
-        pred_col = [col for col in df.columns if 'pred' in col][0]
+        actual_col = f'{var}_actual'
+        pred_col = f'{var}_pred'
 
         # PARAMETERS
         size=14 # font size

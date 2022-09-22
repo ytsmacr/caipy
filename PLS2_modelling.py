@@ -15,7 +15,7 @@ import time
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 21 September 2022
+Last updated 22 September 2022
 
 Script to make PLS2 models, where one model predicts multiple y variables. 
 If only modelling for one variable, PLS1 regression is included in
@@ -341,9 +341,12 @@ Average R2:,{round(mean(train_r2_list),3)}
 Average adjusted R2:,{round(mean(train_adj_r2_list),3)}
 
 '''
-# export
-with open(f"{outpath}\\PLS2_model_info_{all_var.replace(', ','_')}.csv", 'a', newline='\n') as file:
+# export model info
+filename = f"{outpath}\\PLS2_train_results_{all_var.replace(', ','_')}.csv"
+with open(filename, 'w', newline='\n') as file:
     file.write(model_info)
+# append variable info
+with open(filename, 'a', newline='\n') as file:
     variable_info.to_csv(file, index=False)
     
 end = time.time()

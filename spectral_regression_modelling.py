@@ -13,7 +13,7 @@ from model_tools import *
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 15 September 2022
+Last updated 22 September 2022
 
 Train spectral calibration standards with PLS and/or LASSO modelling. 
 Optionally use one fold of standards as test set.
@@ -58,8 +58,8 @@ method_prompt = '''Do you want to run:
     [5] ElasticNet
     [6] Partial Least Squares (PLS)
     [7] Principal Components Regression with linear PCA kernel (PCR-lin)
-    [8] Principal Components Regression with linear PCA kernel (PCR-py)
-    [9] Support Vector Regression with 2nd degree polynomial kernel (SVR-lin)
+    [8] Principal Components Regression with 2nd degree polynomial PCA kernel (PCR-py)
+    [9] Support Vector Regression with linear kernel (SVR-lin)
     [10] Support Vector Regression with 2nd degree polynomial kernel (SVR-py)
     [11] Random Forest regressor (RF)
     [12] Gradient Boosting regressor (GBR)
@@ -67,6 +67,7 @@ method_prompt = '''Do you want to run:
 ...or a combination, separated by a space or comma?: '''
 std_prompt = 'Should all variables follow the same modelling procedure? (set test fold, model type(s)) (y/n): '
 test_prompt = 'Do you want to use one of the folds as a test set? Otherwise all data used for training (y/n): '
+test_prompt2 = 'Which fold should be the test fold? '
 
 # REGRESSION STUFF
 method_dict = {
@@ -159,7 +160,7 @@ if standard:
         print('Error: Input needs to be either y or n')
         do_test = make_bool(input(test_prompt).lower())
     if do_test:
-        test_fold = int(input(f'Which fold should be the test fold? '))
+        test_fold = int(input(test_prompt2))
     
     while True:
         method_type = input(method_prompt)
@@ -217,14 +218,14 @@ for var in var_to_run:
     if not standard:
         do_test = make_bool(input(test_prompt).lower())
         if do_test:
-            test_fold = int(input(f'Which fold should be the test fold? '))
+            test_fold = int(input(test_prompt2))
 
     # get data in the correct format for CV
     if do_test:
         all_folds = ', '.join([str(x) for x in meta[fold_col].unique() if x != -1])
         while test_fold not in meta[fold_col].unique():
             print(f'{test_fold} not in list of available folds: {all_folds}')
-            test_fold = int(input(f'Which fold should be the test fold? '))
+            test_fold = int(input(test_prompt2))
         data_dict, min_samples = form.make_data_dict(var, fold_col, test_fold)
     else:
         data_dict, min_samples = form.make_data_dict(var, fold_col)
@@ -348,15 +349,18 @@ for var in var_to_run:
                         path = outpath)
 
         # PREDICTIONS
+        actual_col = f'{var}_actual'
+        pred_col = f'{var}_pred'
+        
         train_preds = model.predict(X_train)
         train_pred_true = pd.DataFrame({
             'pkey' : train_names,
-            'actual' : y_train.flatten().tolist(),
-            'pred' : train_preds.flatten().tolist()
+            actual_col : y_train.flatten().tolist(),
+            pred_col : train_preds.flatten().tolist()
         })
         train_pred_true.to_csv(f'{outpath}\\{var}_{method}_train_pred_true.csv', index=False)
 
-        rmsec = sqrt(mean_squared_error(train_pred_true.actual, train_pred_true.pred))
+        rmsec = sqrt(mean_squared_error(train_pred_true[actual_col], train_pred_true[pred_col]))
         r2_train = model.score(X_train,y_train)
         adj_r2_train = 1 - (1-r2_train)*(len(train_pred_true) - 1) / (len(train_pred_true) - (train_pred_true.shape[1] - 1) - 1)
         
@@ -389,12 +393,12 @@ for var in var_to_run:
             test_preds = model.predict(X_test)
             test_pred_true = pd.DataFrame({
                 'pkey' : test_names,
-                'actual' : y_test.flatten().tolist(),
-                'pred' : test_preds.flatten().tolist()
+                actual_col : y_test.flatten().tolist(),
+                pred_col : test_preds.flatten().tolist()
             })
             test_pred_true.to_csv(f'{outpath}\\{var}_{method}_test_pred_true.csv', index=False)
 
-            rmsep = sqrt(mean_squared_error(test_pred_true.actual, test_pred_true.pred))
+            rmsep = sqrt(mean_squared_error(test_pred_true[actual_col], test_pred_true[pred_col]))
             r2_test = model.score(X_test,y_test)
             adj_r2_test = 1 - (1-r2_test)*(len(test_pred_true) - 1) / (len(test_pred_true) - (test_pred_true.shape[1] - 1) - 1)
             
@@ -428,6 +432,8 @@ for var in var_to_run:
 #----------------#
 # EXPORT RESULTS #
 #----------------#
+
+# if only had training
 if (set(test_fold_list) == {'NA'}) and (set(n_test_list) == {'NA'}) and(set(rmsep_list) == {'NA'}) and(set(r2_test_list) == {'NA'}) and(set(adj_r2_test_list) == {'NA'}):
     results = pd.DataFrame({
         'variable':var_list,
@@ -442,6 +448,8 @@ if (set(test_fold_list) == {'NA'}) and (set(n_test_list) == {'NA'}) and(set(rmse
     })
     
     results.to_csv(f'{outpath}\\modelling_train_results.csv', index=False)
+
+# if had training and testing    
 else:
     results = pd.DataFrame({
         'variable':var_list,
