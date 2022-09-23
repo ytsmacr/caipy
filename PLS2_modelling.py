@@ -10,7 +10,7 @@ from tqdm import tqdm
 from matplotlib import pyplot as plt
 import matplotlib.ticker as mticker
 from sklearn.cross_decomposition import PLSRegression
-from model_tools import check_csv, make_bool, select_spectra, get_first_local_minimum
+from model_tools import check_csv, make_bool, select_spectra, get_first_local_minimum, Plot
 import time
 
 '''
@@ -283,13 +283,12 @@ train_pred_true = actual_vals.merge(train_preds, right_index=True, left_index=Tr
 cols = list(train_pred_true.columns)
 cols.sort()
 train_pred_true = train_pred_true[cols]
+# insert pkey and Sample Name, if there
+train_pred_true.insert(0,'pkey',train_names)
+if 'Sample_Name' in train_meta.columns:
+    train_pred_true.insert(1,'Sample_Name',train_meta['Sample_Name'])
 
 train_pred_true.to_csv(f"{outpath}\\PLS2_train_pred_true_{all_var.replace(', ','_')}.csv", index=False)
-
-train_rmsecv_list = []
-train_rmsec_list = []
-train_r2_list = []
-train_adj_r2_list = []
 
 #--------------#
 # COEFFICIENTS #
@@ -302,6 +301,12 @@ coef_df.to_csv(f"{outpath}\\PLS2_coeff_{all_var.replace(', ','_')}.csv", index=F
 #------------#
 # MODEL INFO #
 #------------#
+
+rmsecv_list = []
+rmsec_list = []
+r2_list = []
+adj_r2_list = []
+
 # get results for each variable
 for var in var_to_run:
     
@@ -315,18 +320,27 @@ for var in var_to_run:
     r2 = r2_score(actual, pred)
     adj_r2 = 1 - (1-r2)*(len(train_pred_true) - 1) / (len(train_pred_true) - (train_pred_true.shape[1] - 1) - 1)
     
-    train_rmsecv_list.append(rmsecv)
-    train_rmsec_list.append(rmsec)
-    train_r2_list.append(r2)
-    train_adj_r2_list.append(adj_r2)
+    rmsecv_list.append(rmsecv)
+    rmsec_list.append(rmsec)
+    r2_list.append(r2)
+    adj_r2_list.append(adj_r2)
+    
+    # PLOT
+    Plot.pred_true(df = train_pred_true,
+                   var = var, 
+                   method = 'PLS2', 
+                   type = 'train',
+                   rmse = rmsecv,
+                   adj_r2 = adj_r2,
+                   path = outpath)
 
 variable_info = pd.DataFrame({
     'Variable' : var_to_run,
     'Model intercept' : list(model.intercept_),
-    'RMSE-CV' : train_rmsecv_list,
-    'RMSE-C' : train_rmsec_list,
-    'R2' : train_r2_list,
-    'Adjusted R2' : train_adj_r2_list
+    'RMSE-CV' : rmsecv_list,
+    'RMSE-C' : rmsec_list,
+    'R2' : r2_list,
+    'Adjusted R2' : adj_r2_list
 })
 
 # overall model info
@@ -335,10 +349,10 @@ model_info = f'''*PLS2 Model Information*
 Predicted variables:,{all_var.replace(',', '')}
 Number of standards:,{len(y_train)}
 Number of model components:,{component_to_use}
-Average RMSE-CV:,{round(mean(train_rmsecv_list),3)}
-Average RMSE-C:,{round(mean(train_rmsec_list),3)}
-Average R2:,{round(mean(train_r2_list),3)}
-Average adjusted R2:,{round(mean(train_adj_r2_list),3)}
+Average RMSE-CV:,{round(mean(rmsecv_list),3)}
+Average RMSE-C:,{round(mean(rmsec_list),3)}
+Average R2:,{round(mean(r2_list),3)}
+Average adjusted R2:,{round(mean(adj_r2_list),3)}
 
 '''
 # export model info
