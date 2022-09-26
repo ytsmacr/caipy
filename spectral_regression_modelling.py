@@ -13,7 +13,7 @@ from model_tools import *
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 22 September 2022
+Last updated 26 September 2022
 
 Train spectral calibration standards with PLS and/or LASSO modelling. 
 Optionally use one fold of standards as test set.
@@ -231,6 +231,7 @@ for var in var_to_run:
         data_dict, min_samples = form.make_data_dict(var, fold_col)
         
     # update parameters if larger than min samples
+    max_components = len(spectra) if max_components > len(spectra) else max_components
     num_params = min_samples if num_params > min_samples else num_params
     max_neighbors = min_samples if max_neighbors > min_samples else max_neighbors
         
