@@ -7,7 +7,7 @@ from model_tools import check_csv
 
 '''
 Code by Cai Ytsma (ytsmacr@gmail.com)
-Last updated 22 September 2022
+Last updated 26 September 2022
 
 This code takes stratifies samples into a set number of folds, 
 grouping by sample name (if applicable) and sorting by metadata value.
@@ -31,7 +31,7 @@ while not os.path.exists(meta_file):
     print(f'Error: path {meta_file} does not exist')
     meta_file = check_csv(input('Path location and file name: (e.g. C:\Documents\meta_file.csv) '))
     
-fold_input = input('How many folds do you want? (Press ENTER for default of 5) ')
+fold_input = input('How many folds do you want? (Press ENTER for default of 5, or 0 for leave-one-out (k=N) ')
 n_folds = 5 if fold_input == "" else int(fold_input)
 
 meta = pd.read_csv(meta_file).reset_index()
@@ -74,7 +74,11 @@ if has_sample:
                 if current_sample == last_sample:
                     fold_list.append(last_fold)
                 else:
-                    current_fold = int(last_fold + 1 if last_fold < n_folds else 1)
+                    if n_folds == 0: # LOO
+                        current_fold = int(last_fold + 1)
+                    else: # loop in fold list
+                        current_fold = int(last_fold + 1 if last_fold < n_folds else 1)
+                    
                     fold_list.append(current_fold)
 
         meta[f'{var}_Folds'] = fold_list
