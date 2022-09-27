@@ -11,6 +11,7 @@ From Anaconda Prompt command line:
 2. Activate the environment:	`conda activate auto`
 3. Navigate to path containing files: `cd your_path_here`
 4. Install required packages: `conda install --file requirements.txt`
+4.5 If you get the following issue downloading scikit-learn: "The following packages are not available from the current channels:", then run `conda config --add channels conda-forge`
 
 ### To run files
 1. Activate the environment: `conda activate auto`
