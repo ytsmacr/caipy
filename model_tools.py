@@ -4,6 +4,7 @@ from math import sqrt
 from sklearn.metrics import mean_squared_error
 from statistics import mean
 from tqdm import tqdm
+import os
 import matplotlib.pyplot as plt 
 plt.set_loglevel('error')
 
@@ -17,14 +18,14 @@ from sklearn.pipeline import Pipeline
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 22 September 2022
+Last updated 26 September 2022
 
 Helper functions and classes used by other programs in auto-modelling.
 '''
 
-##########################################
+########################
 # STANDALONE FUNCTIONS #
-##########################################
+########################
 # check format of input .asc filename
 def check_asc(filename):
 
@@ -130,6 +131,45 @@ def get_first_local_minimum(li):
     # in case the last point is the lowest
     return min
 
+# get user-input data folder
+def get_data_folder():
+    in_prompt = 'Folder path containing data: '
+    data_folder = input(in_prompt)
+    while not os.path.exists(data_folder):
+        print(f'Error: path {data_folder} does not exist\n')
+        data_folder = input(in_prompt)
+    all_files = os.listdir(data_folder)
+    return data_folder, all_files
+
+# get user-input spectra path
+def get_spectra_path(data_folder, all_files):
+    spectra_prompt = 'Spectra filename: '
+    spectra_file = check_csv(input(spectra_prompt))
+    while spectra_file not in all_files:
+        print(f'Error: file {spectra_file} not in data folder\n')
+        spectra_file = check_csv(input(spectra_prompt))
+    spectra_path = os.path.join(data_folder, spectra_file)
+    return spectra_path
+
+# get user-input metadata path
+def get_meta_path(data_folder, all_files):
+    meta_prompt = 'Metadata filename: '
+    meta_file = check_csv(input(meta_prompt))
+    while meta_file not in all_files:
+        print(f'Error: file {meta_file} not in data folder\n')
+        meta_file = check_csv(input(meta_prompt))
+    meta_path = os.path.join(data_folder, meta_file)
+    return meta_path
+
+# get user-input output folder
+def get_out_folder():
+    out_prompt = 'Folder path to export results: '
+    outpath = input(out_prompt)
+    while not os.path.exists(outpath):
+        print(f'Error: path {outpath} does not exist\n')
+        outpath = input(out_prompt)
+    return outpath
+    
 ##########################################
 
 class Format():

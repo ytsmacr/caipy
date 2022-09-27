@@ -6,7 +6,7 @@ from sklearn.metrics import mean_squared_error, r2_score
 from math import sqrt
 import re
 
-from model_tools import check_csv, check_asc, make_bool, convert_spectra, Plot
+from model_tools import *
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
@@ -58,11 +58,7 @@ if have_comps:
         meta_file = check_csv(input(test_prompt))
         
 # folder to export results to
-out_prompt = 'File path to export results: '
-outpath = input(out_prompt)
-while not os.path.exists(outpath):
-    print(f'Error: path {outpath} does not exist\n')
-    outpath = input(out_prompt)
+outpath = get_out_folder()
     
 # load files
 model = pickle.load(open(model_file, 'rb'))

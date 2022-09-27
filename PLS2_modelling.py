@@ -3,19 +3,18 @@ import numpy as np
 from sklearn.metrics import mean_squared_error, r2_score
 from math import sqrt
 import warnings
-import os
 import pickle
 from statistics import mean
 from tqdm import tqdm
 from matplotlib import pyplot as plt
 import matplotlib.ticker as mticker
 from sklearn.cross_decomposition import PLSRegression
-from model_tools import check_csv, make_bool, select_spectra, get_first_local_minimum, Plot
+from model_tools import *
 import time
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 22 September 2022
+Last updated 26 September 2022
 
 Script to make PLS2 models, where one model predicts multiple y variables. 
 If only modelling for one variable, PLS1 regression is included in
@@ -25,37 +24,10 @@ spectral_regression_modelling.py
 #-------------------#
 # INPUT INFORMATION #
 #-------------------#
-# data folder
-in_prompt = 'Folder path containing data: '
-data_folder = input(in_prompt)
-while not os.path.exists(data_folder):
-    print(f'Error: path {data_folder} does not exist\n')
-    data_folder = input(in_prompt)
-    
-all_files = os.listdir(data_folder)
-
-# spectra
-spectra_prompt = 'Spectra filename: '
-spectra_file = check_csv(input(spectra_prompt))
-while spectra_file not in all_files:
-    print(f'Error: file {spectra_file} not in data folder\n')
-    spectra_file = check_csv(input(spectra_prompt))
-spectra_path = os.path.join(data_folder, spectra_file)
-
-# metadata
-meta_prompt = 'Metadata filename: '
-meta_file = check_csv(input(meta_prompt))
-while meta_file not in all_files:
-    print(f'Error: file {meta_file} not in data folder\n')
-    meta_file = check_csv(input(meta_prompt))
-meta_path = os.path.join(data_folder, meta_file)
-
-# folder to export results to
-out_prompt = 'Folder path to export results: '
-outpath = input(out_prompt)
-while not os.path.exists(outpath):
-    print(f'Error: path {outpath} does not exist\n')
-    outpath = input(out_prompt)
+data_folder, all_files = get_data_folder()
+spectra_path = get_spectra_path(data_folder, all_files)
+meta_path = get_meta_path(data_folder, all_files)
+outpath = get_out_folder()
     
 # define maximum number of components
 default_max_components = 30

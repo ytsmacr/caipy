@@ -6,7 +6,7 @@ import math
 from model_tools import check_csv
 
 '''
-Code by Cai Ytsma (ytsmacr@gmail.com)
+by Cai Ytsma (cai@caiconsulting.co.uk)
 Last updated 26 September 2022
 
 This code takes stratifies samples into a set number of folds, 

@@ -94,33 +94,10 @@ non_linear_methods = ['SVR-py', 'PCR-lin', 'PCR-py', 'RF', 'GBR', 'kNN']
 #-------------------#
 # INPUT INFORMATION #
 #-------------------#
-# data folder
-data_folder = input('Folder path containing data: ')
-while not os.path.exists(data_folder):
-    print(f'Error: path {data_folder} does not exist\n')
-    data_folder = input('Folder path containing data: ')
-    
-all_files = os.listdir(data_folder)
-
-# spectra
-spectra_file = check_csv(input('Spectra filename: '))
-while spectra_file not in all_files:
-    print(f'Error: file {spectra_file} not in data folder\n')
-    spectra_file = check_csv(input('Spectra filename: '))
-spectra_path = os.path.join(data_folder, spectra_file)
-
-# metadata
-meta_file = check_csv(input('Metadata filename: '))
-while meta_file not in all_files:
-    print(f'Error: file {meta_file} not in data folder\n')
-    meta_file = check_csv(input('Metadata filename: '))
-meta_path = os.path.join(data_folder, meta_file)
-
-# folder to export results to
-outpath = input('File path to export results: ')
-while not os.path.exists(outpath):
-    print(f'Error: path {outpath} does not exist\n')
-    outpath = input('File path to export results: ')
+data_folder, all_files = get_data_folder()
+spectra_path = get_spectra_path(data_folder, all_files)
+meta_path = get_meta_path(data_folder, all_files)
+outpath = get_out_folder()
     
 #----------------#
 # PREP PROCEDURE #
