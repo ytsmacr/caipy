@@ -97,7 +97,7 @@ n_bad = len(channel_df_over_thresh)
 n_all = len(channel_df)
 title = f'{n_bad} channels have a relative uncertainty > {round(upper_threshold,2)} ({percent}th percentile)'
 
-med_c = 'red'
+med_c = 'orange'
 mean_c = 'blue'
 
 plt.hist(channel_df_below_thresh.avg_rel_stdev, bins=20)
