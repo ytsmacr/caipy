@@ -7,7 +7,7 @@ from model_tools import *
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 27 September 2022
+Last updated 28 September 2022
 
 This program calculates the overall sensitivity of a 
 dataset by calculating the standard deviation within
@@ -68,15 +68,20 @@ for sample in meta.Sample_Name.unique():
 
 avg_channel_rel_stdev = pd.DataFrame(rel_stdev_list).mean(axis=0)
 
-# calculate threshold value
-percent = int(input('What should the upper percentile threshold be, for identifying channels with large relative uncertainty? '))
-upper_threshold = np.percentile(avg_channel_rel_stdev, percent)
-
 # cumulate
 channel_df = pd.DataFrame({
   'wave':spectra['wave'],
   'avg_rel_stdev':avg_channel_rel_stdev
 })
+# remove empty cells
+channel_df.dropna(inplace=True)
+
+# calculate threshold value
+percent = int(input('What should the upper percentile threshold be, for identifying channels with large relative uncertainty? '))
+upper_threshold = np.percentile(channel_df['avg_rel_stdev'], percent)
+print(f'{percent}th percentile: {upper_threshold}')
+
+# add data to df
 channel_df[f'below_{percent}th_percentile'] = ['yes' if f <= upper_threshold else 'no' for f in channel_df['avg_rel_stdev']]
 # export
 channel_df.to_csv(f'{outpath}\\average_relative_channel_uncertainty.csv', index=False)
