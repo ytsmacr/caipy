@@ -1,3 +1,4 @@
+# standard packages
 import pandas as pd
 import numpy as np
 from math import sqrt
@@ -8,6 +9,12 @@ import os
 import matplotlib.pyplot as plt 
 plt.set_loglevel('error')
 
+# preprocessing
+from tools.airPLS import airPLS
+from tools.spectres import spectres
+from sklearn.preprocessing import normalize
+
+# modelling
 from sklearn.linear_model import Lasso, Ridge, ElasticNet, LinearRegression, OrthogonalMatchingPursuit
 from sklearn.cross_decomposition import PLSRegression
 from sklearn.decomposition import PCA, KernelPCA
@@ -18,7 +25,7 @@ from sklearn.pipeline import Pipeline
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 26 September 2022
+Last updated 06 October 2022
 
 Helper functions and classes used by other programs in auto-modelling.
 '''
@@ -172,6 +179,230 @@ def get_out_folder():
     
 ##########################################
 
+class Preprocess():
+    
+    '''
+    Functions used to preprocess spectra
+    '''
+    
+    class Resample():
+        
+        '''
+        RESAMPLE SPECTRA
+        '''
+    
+        # resample spectra to given axis
+        def resample_to_match(spectra_to_resample, spectra_to_match = None):
+
+            # using Spectres package
+            ## https://spectres.readthedocs.io/en/latest/
+            ## https://arxiv.org/pdf/1705.05165v1.pdf
+
+            if spectra_to_match is None:
+                print('Resampling to SuperCam -2px shifted wavelength axis by default')
+                spectra_to_match = pd.read_csv('data\\SuperCam_cal_shift-2pix_axis.csv')
+
+            # if input is a dataframe
+            if isinstance(spectra_to_match,pd.DataFrame):
+                if 'wave' not in spectra_to_match.columns:
+                    print('Axis to match needs "wave" header')
+                    return
+                new_axis = spectra_to_match['wave'].to_numpy()
+
+            # if input is an array
+            elif isinstance(spectra_to_match,np.ndarray):
+                new_axis = spectra_to_match
+
+            else:
+                print('Spectra to match must either be a dataframe with "wave" column, or a numpy array of values')
+                return
+
+            temp = spectra_to_resample.copy()
+            old_axis = temp['wave'].to_numpy()
+
+            if list(new_axis) == list(old_axis):
+                print('Spectral axes already matched')
+                return
+
+            temp.drop('wave', axis=1, inplace=True)
+            old_spectra = temp.T.to_numpy()
+
+            new_spectra = spectres(new_axis, old_axis, old_spectra, fill=0, verbose=False)
+            new_spectra = pd.DataFrame(new_spectra).T
+            new_spectra.columns = temp.columns
+            new_spectra.insert(0,'wave',new_axis)
+
+            return new_spectra
+
+        # resample uniformly to minimum step size
+        def resample_to_min_step(spectra):
+
+            if 'wave' not in spectra.columns:
+                print('Input spectra must have "wave" axis column')
+                return
+
+            axis = spectra['wave'].to_numpy()
+
+            # get step sizes
+            step_set = set()
+            for i in np.arange(len(wave))[:-1]:
+                current = wave[i]
+                next = wave[i+1]
+                step = next-current
+                step_set.add(step)
+
+            # get minimum
+            min_step = min(step_set)
+
+            # populate new axis with this step size
+            min_step_axis = np.arange(start = axis[0], stop = axis[-1]+min_step, step=min_step)
+
+            # resample spectra to match this
+            resampled_spectra = Resample.resample_to_match(spectra, min_step_axis)
+            return resampled_spectra
+    
+    class BLR():
+        
+        '''
+        BASELINE REMOVAL
+        '''
+    
+        # airPLS baseline removal
+        ## recommend that resample to min step size first ##
+        def AirPLS(spectra,
+                   l = 100):
+
+            if spectra.columns[0] != 'wave':
+                print('This function needs the first column to be the axis, "wave"')
+                return
+
+            spec_list = []
+
+            for column in tqdm(spectra.columns[1:], desc='Removing baseline from each spectrum'):
+                spectrum = spectra[column]
+                bl = airPLS(spectrum, lambda_ = 1)
+                blr_spectrum = spectrum - bl
+                blr_spectrum = blr_spectrum.tolist()
+                spec_list.append(blr_spectrum)
+
+            blr_spectra = pd.DataFrame(spec_list).T
+            blr_spectra.columns = spectra.columns[1:]
+            blr_spectra.insert(0, 'wave', spectra['wave'])
+
+            return blr_spectra
+        
+    class Normalize():
+        
+        '''
+        NORMALIZATION
+        '''
+    
+        # normalize each df subset of data, then concatenate
+        def normalize_regions(df_list: list,
+                              method = 'l1'):
+
+            count = 0
+
+            # default, but leaving option open for other methods
+            if method = 'l1':
+                def normalization(array):
+                    return (array/sum(array))
+            else:
+                print('Method not defined')
+                return
+
+            for df in df_list:
+                spectra_list = []
+
+                # first, add wavelength
+                wave = list(df['wave'])
+                spectra_list.append(wave)
+
+                # get names
+                names = df.columns
+
+                for sample in df.columns[1:]:
+                    # convert spectrum to array
+                    spectrum = df[sample].T.to_numpy()
+                    # normalize spectrum
+                    norm_spectrum = normalization(spectrum)
+                    # add to list
+                    spectra_list.append(norm_spectrum)
+
+                # then, make df or add to df
+                if count == 0:
+                    normed_dataset = pd.DataFrame(spectra_list).T
+                    normed_dataset.columns = names
+
+                else:
+                    df_to_add = pd.DataFrame(spectra_list).T
+                    df_to_add.columns = names
+
+                    normed_dataset = pd.concat([normed_dataset, df_to_add], ignore_index=True)
+
+                count+=1
+
+            return normed_dataset
+
+        # normalize by SuperCam method
+        def norm5_SC(spectra):
+
+            # limits from Anderson et al. 2021, Table 1.
+            # https://doi.org/10.1016/j.sab.2021.106347
+
+            uv = spectra[(spectra['wave'] >= 243.79) & (spectra['wave'] <= 341.36)].copy(deep=True)
+            vis = spectra[(spectra['wave'] >= 379.26) & (spectra['wave'] <= 464.54)].copy(deep=True)
+            vnir_1 = spectra[(spectra['wave'] >= 537.57) & (spectra['wave'] <= 619.82)].copy(deep=True)
+            vnir_2 = spectra[(spectra['wave'] >= 620.08) & (spectra['wave'] <= 712.14)].copy(deep=True)
+            vnir_3 = spectra[(spectra['wave'] >= 712.17) & (spectra['wave'] <= 852.77)].copy(deep=True)
+
+            df_list = [uv, vis, vnir_1, vnir_2, vnir_3]
+
+            normed_spectra = Normalize.normalize_regions(df_list)
+
+            return normed_spectra
+
+        # normalize by ChemCam method
+        def norm3_CL(spectra):
+
+            uv = spectra[(spectra['wave'] >= 246.68) & (spectra['wave'] <= 338.42)].copy(deep=True)
+            vis = spectra[(spectra['wave'] >= 387.9) & (spectra['wave'] <= 469.1)].copy(deep=True)
+            vnir = spectra[(spectra['wave'] >= 492.65) & (spectra['wave'] <= 849.1)].copy(deep=True)
+
+            df_list = [uv, vis, vnir]
+
+            normed_spectra = Normalize.normalize_regions(df_list)
+
+            return normed_spectra
+        
+        # normalize by SuperLIBS 10K method
+        def norm3_SL_10K(spectra):
+
+            uv = spectra[(spectra['wave'] >= 233.12) & (spectra['wave'] <= 351.35)].copy(deep=True)
+            vis = spectra[(spectra['wave'] >= 370.16) & (spectra['wave'] <= 479.07)].copy(deep=True)
+            vnir = spectra[(spectra['wave'] >= 498.14) & (spectra['wave'] <= 859.44)].copy(deep=True)
+
+            df_list = [uv, vis, vnir]
+
+            normed_spectra = Normalize.normalize_regions(df_list)
+
+            return normed_spectra
+        
+        # normalize by SuperLIBS 18K method
+        def norm3_SL_18K(spectra):
+
+            uv = spectra[(spectra['wave'] >= 233.12) & (spectra['wave'] <= 351.35)].copy(deep=True)
+            vis = spectra[(spectra['wave'] >= 370.16) & (spectra['wave'] <= 479.07)].copy(deep=True)
+            vnir = spectra[(spectra['wave'] >= 508.3) & (spectra['wave'] <= 869.2)].copy(deep=True)
+
+            df_list = [uv, vis, vnir]
+
+            normed_spectra = Normalize.normalize_regions(df_list)
+
+            return normed_spectra
+
+##########################################
+
 class Format():
     
     '''
@@ -265,7 +496,9 @@ class Format():
             X_train = select_spectra(self.spectra, train_names)
 
             return train_names, X_train, y_train
-    
+
+##########################################        
+
 class Model():
     
     '''
@@ -522,7 +755,7 @@ class Model():
         
         return param, rmsecv, model
     
-    
+##########################################   
     
 class Plot():
     
