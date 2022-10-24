@@ -12,7 +12,7 @@ from model_tools import *
 by Cai Ytsma (cai@caiconsulting.co.uk)
 Last updated 22 September 2022
 
-Test .asc sklearn PLS2 model on input data. Returns .csv of predicted values.
+Apply .asc sklearn PLS2 model to input data. Returns .csv of predicted values.
 Optionally include metadata file for test samples to generate:
     - RMSE-P, R2, adjusted R2
     - predicted vs. true scatter plots

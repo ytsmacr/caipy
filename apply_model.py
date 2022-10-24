@@ -12,7 +12,7 @@ from model_tools import check_csv, check_asc, make_bool, convert_spectra, Plot
 by Cai Ytsma (cai@caiconsulting.co.uk)
 Last updated 22 September 2022
 
-Test .asc sklearn model on input data. Returns .csv of predicted values.
+Apply .asc sklearn model to input data. Returns .csv of predicted values.
 Optionally include metadata file for test samples to generate:
     - RMSE-P, R2, adjusted R2
     - predicted vs. true scatter plot

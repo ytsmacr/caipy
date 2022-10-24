@@ -13,7 +13,7 @@ from model_tools import *
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 26 September 2022
+Last updated 24 October 2022
 
 Train spectral calibration standards with PLS and/or LASSO modelling. 
 Optionally use one fold of standards as test set.
@@ -141,15 +141,22 @@ if standard:
     
     while True:
         method_type = input(method_prompt)
-        method_types = [int(x) for x in re.findall('\d', str(method_type))]
+        div = ',' if ',' in method_type else ' '
+        method_types = [int(x) for x in method_type.split(div)]
         if set(method_types).issubset(set(method_dict.keys())):
+            if 0 in method_types:
+                methods_torun = method_dict[0]
+                print("\nPerforming", ', '.join([str(x) for x in methods_torun]), "regressions")
+                break
             if len(method_types)>1:    
                 methods_torun = []
                 for m in method_types:
                     methods_torun = methods_torun + method_dict[m]
                     methods_torun = list(set(methods_torun))
+                print("\nPerforming", ', '.join([str(x) for x in methods_torun]), "regressions")
             elif len(method_types) == 1:
                 methods_torun = method_dict[method_types[0]]
+                print(f'\nPerforming {methods_torun[0]} regression')
             break
         else:    
             print(f"Error: Input must be one of {all_methods}")
@@ -215,21 +222,25 @@ for var in var_to_run:
     if not standard:
         while True:
             method_type = input(method_prompt)
-            method_types = [int(x) for x in re.findall('\d+', str(method_type))]
+            div = ',' if ',' in method_type else ' '
+            method_types = [int(x) for x in method_type.split(div)]
             if set(method_types).issubset(set(method_dict.keys())):
+                if 0 in method_types:
+                    methods_torun = method_dict[0]
+                    print("\nPerforming", ', '.join([str(x) for x in methods_torun]), "regressions")
+                    break
                 if len(method_types)>1:    
                     methods_torun = []
                     for m in method_types:
                         methods_torun = methods_torun + method_dict[m]
                         methods_torun = list(set(methods_torun))
-                        print("\Performing", ', '.join([str(x) for x in methods_torun]), "regressions")
-                        break
+                    print("\nPerforming", ', '.join([str(x) for x in methods_torun]), "regressions")
                 elif len(method_types) == 1:
                     methods_torun = method_dict[method_types[0]]
                     print(f'\nPerforming {methods_torun[0]} regression')
-                    break
+                break
             else:    
-                print(f"Error: Input(s) must be among {all_methods}")
+                print(f"Error: Input must be one of {all_methods}")
 
     # initiate modelling class with data dictionary
     modelling = Model(data_dict)
