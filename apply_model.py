@@ -10,7 +10,7 @@ from model_tools import check_csv, check_asc, make_bool, convert_spectra, Plot
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 22 September 2022
+Last updated 24 October 2022
 
 Apply .asc sklearn model to input data. Returns .csv of predicted values.
 Optionally include metadata file for test samples to generate:
@@ -99,7 +99,7 @@ pred_df = pd.DataFrame({
 })
 
 if not have_comps:
-    pred_df.to_csv(f'{outpath}\\{var}_{method}_test_predictions.csv', index=False)
+    pred_df.to_csv(f'{outpath}\\{var}_{method}_predictions.csv', index=False)
     print('Exported predicted values')
 
 else:
@@ -140,5 +140,5 @@ else:
                    rmse = rmsep,
                    adj_r2 = adj_r2,
                    path = outpath)
-    pred_true.to_csv(f'{outpath}\\{var}_{method}_test_pred_true.csv', index=False)
+    pred_true.to_csv(f'{outpath}\\{var}_{method}_pred_true.csv', index=False)
     print('Exported predicted vs. true values and plot')

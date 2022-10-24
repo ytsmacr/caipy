@@ -10,7 +10,7 @@ from model_tools import *
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 22 September 2022
+Last updated 24 October 2022
 
 Apply .asc sklearn PLS2 model to input data. Returns .csv of predicted values.
 Optionally include metadata file for test samples to generate:
@@ -98,7 +98,7 @@ pred_df.columns = [f'{var}_pred' for var in var_list]
 pred_df.insert(0,'pkey',spectra.columns[1:])
 
 if not have_comps:
-    pred_df.to_csv(f"{outpath}\\PLS2_test_predictions_{'_'.join(var_list)}.csv", index=False)
+    pred_df.to_csv(f"{outpath}\\PLS2_predictions_{'_'.join(var_list)}.csv", index=False)
     print('Exported predicted values')
     
 # predicted vs true
@@ -119,7 +119,7 @@ if have_comps:
     # combine
     pred_true = actual_df.merge(pred_df)
     # export
-    pred_true.to_csv(f"{outpath}\\PLS2_test_pred_true_{'_'.join(var_list)}.csv", index=False)
+    pred_true.to_csv(f"{outpath}\\PLS2_pred_true_{'_'.join(var_list)}.csv", index=False)
     
     # get results for each variable
     rmsep_list = []
@@ -155,5 +155,5 @@ if have_comps:
         'Adjusted R2' : adj_r2_list
     })
     # export
-    test_results.to_csv(f"{outpath}\\PLS2_test_results_{'_'.join(var_list)}.csv", index=False)
+    test_results.to_csv(f"{outpath}\\PLS2_results_{'_'.join(var_list)}.csv", index=False)
     print('Exported predicted vs. true values and plot')
