@@ -539,7 +539,7 @@ class Model():
             # add results to dictionary
             cv_dict[temp_rmsecv] = n_components
             
-        rmsecv = min(list(cv_dict.keys()))
+        rmsecv = get_first_local_minimum(list(cv_dict.keys()))
         component = cv_dict[rmsecv]
         model = PLSRegression(n_components = component, scale=False)
         
@@ -557,7 +557,7 @@ class Model():
             temp_rmsecv = Model.run_CV(self, model)
             cv_dict[temp_rmsecv] = alpha
 
-        rmsecv = min(list(cv_dict.keys()))
+        rmsecv = get_first_local_minimum(list(cv_dict.keys()))
         alpha = cv_dict[rmsecv]
         model = Lasso(alpha=alpha)
         
@@ -575,7 +575,7 @@ class Model():
             temp_rmsecv = Model.run_CV(self, model)
             cv_dict[temp_rmsecv] = alpha
         
-        rmsecv = min(list(cv_dict.keys()))
+        rmsecv = get_first_local_minimum(list(cv_dict.keys()))
         alpha = cv_dict[rmsecv]
         model = Ridge(alpha=alpha)
         
@@ -597,7 +597,7 @@ class Model():
                 temp_rmsecv = Model.run_CV(self, model)
                 cv_dict[temp_rmsecv] = [alpha, ratio]
         
-        rmsecv = min(list(cv_dict.keys()))
+        rmsecv = get_first_local_minimum(list(cv_dict.keys()))
         params = cv_dict[rmsecv]
         model = ElasticNet(alpha=params[0], l1_ratio=params[1])
         
@@ -618,7 +618,7 @@ class Model():
             temp_rmsecv = Model.run_CV(self, model)
             cv_dict[temp_rmsecv] = epsilon
         
-        rmsecv = min(list(cv_dict.keys()))
+        rmsecv = get_first_local_minimum(list(cv_dict.keys()))
         epsilon = cv_dict[rmsecv]
         model = SVR(kernel='linear', epsilon=epsilon)
         
@@ -638,7 +638,7 @@ class Model():
             temp_rmsecv = Model.run_CV(self, model)
             cv_dict[temp_rmsecv] = epsilon
         
-        rmsecv = min(list(cv_dict.keys()))
+        rmsecv = get_first_local_minimum(list(cv_dict.keys()))
         epsilon = cv_dict[rmsecv]
         model = SVR(kernel='poly', degree=poly_deg, epsilon=epsilon)
         
@@ -690,7 +690,7 @@ class Model():
             temp_rmsecv = Model.run_CV(self, model)
             cv_dict[temp_rmsecv] = feat
         
-        rmsecv = min(list(cv_dict.keys()))
+        rmsecv = get_first_local_minimum(list(cv_dict.keys()))
         feat = cv_dict[rmsecv]
         model = RandomForestRegressor(max_features=feat)
         
@@ -708,7 +708,7 @@ class Model():
             temp_rmsecv = Model.run_CV(self, model)
             cv_dict[temp_rmsecv] = feat
         
-        rmsecv = min(list(cv_dict.keys()))
+        rmsecv = get_first_local_minimum(list(cv_dict.keys()))
         feat = cv_dict[rmsecv]
         model = GradientBoostingRegressor(random_state=0, max_features=feat)
         
@@ -738,7 +738,7 @@ class Model():
                 temp_rmsecv = Model.run_CV(self, model)
                 cv_dict[temp_rmsecv] = [neighbor, weight]
         
-        rmsecv = min(list(cv_dict.keys()))
+        rmsecv = get_first_local_minimum(list(cv_dict.keys()))
         params = cv_dict[rmsecv]
         model = KNeighborsRegressor(n_neighbors=params[0], weights=params[1])
         
