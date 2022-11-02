@@ -25,7 +25,7 @@ from sklearn.pipeline import Pipeline
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 20 October 2022
+Last updated 26 October 2022
 
 Helper functions and classes used by other programs in auto-modelling.
 '''
@@ -189,8 +189,10 @@ class Preprocess():
     '''
 
     # resample spectra to given axis
-    def resample_to_match(spectra_to_resample, spectra_to_match = None):
+    def resample_to_match(spectra, spectra_to_match = None):
 
+        spectra_to_resample = spectra.copy()
+        
         # using Spectres package
         ## https://spectres.readthedocs.io/en/latest/
         ## https://arxiv.org/pdf/1705.05165v1.pdf
@@ -232,12 +234,14 @@ class Preprocess():
 
     # resample uniformly to minimum step size
     def resample_to_min_step(spectra):
+        
+        spectra_to_resample = spectra.copy()
 
-        if 'wave' not in spectra.columns:
+        if 'wave' not in spectra_to_resample.columns:
             print('Input spectra must have "wave" axis column')
             return
 
-        axis = spectra['wave'].to_numpy()
+        axis = spectra_to_resample['wave'].to_numpy()
 
         # get step sizes
         step_set = set()
@@ -254,7 +258,7 @@ class Preprocess():
         min_step_axis = np.arange(start = axis[0], stop = axis[-1]+min_step, step=min_step)
 
         # resample spectra to match this
-        resampled_spectra = Resample.resample_to_match(spectra, min_step_axis)
+        resampled_spectra = Resample.resample_to_match(spectra_to_resample, min_step_axis)
         return resampled_spectra
 
     '''
@@ -266,22 +270,26 @@ class Preprocess():
     def AirPLS(spectra,
                l = 100):
 
-        if spectra.columns[0] != 'wave':
-            print('This function needs the first column to be the axis, "wave"')
-            return
+        spectra_to_blr = spectra.copy()
+        
+        if spectra_to_blr.isnull().values.any():
+            raise ValueError('The spectra contains NA values - remove and rerun')
+        
+        if spectra_to_blr.columns[0] != 'wave':
+            raise ValueError('This function needs the first column to be the axis, "wave"')
 
         spec_list = []
 
-        for column in spectra.columns[1:]:
-            spectrum = spectra[column]
+        for column in spectra_to_blr.columns[1:]:
+            spectrum = spectra_to_blr[column]
             bl = airPLS(spectrum, lambda_ = 1)
             blr_spectrum = spectrum - bl
             blr_spectrum = blr_spectrum.tolist()
             spec_list.append(blr_spectrum)
 
         blr_spectra = pd.DataFrame(spec_list).T
-        blr_spectra.columns = spectra.columns[1:]
-        blr_spectra.insert(0, 'wave', spectra['wave'])
+        blr_spectra.columns = spectra_to_blr.columns[1:]
+        blr_spectra.insert(0, 'wave', spectra_to_blr['wave'])
 
         return blr_spectra
         
@@ -338,15 +346,17 @@ class Preprocess():
 
     # normalize by SuperCam method
     def norm5_SC(spectra):
+        
+        spectra_tonorm = spectra.copy()
 
         # limits from Anderson et al. 2021, Table 1.
         # https://doi.org/10.1016/j.sab.2021.106347
 
-        uv = spectra[(spectra['wave'] >= 243.79) & (spectra['wave'] <= 341.36)].copy(deep=True)
-        vis = spectra[(spectra['wave'] >= 379.26) & (spectra['wave'] <= 464.54)].copy(deep=True)
-        vnir_1 = spectra[(spectra['wave'] >= 537.57) & (spectra['wave'] <= 619.82)].copy(deep=True)
-        vnir_2 = spectra[(spectra['wave'] >= 620.08) & (spectra['wave'] <= 712.14)].copy(deep=True)
-        vnir_3 = spectra[(spectra['wave'] >= 712.17) & (spectra['wave'] <= 852.77)].copy(deep=True)
+        uv = spectra_tonorm[(spectra_tonorm['wave'] >= 243.79) & (spectra_tonorm['wave'] <= 341.36)].copy()
+        vis = spectra_tonorm[(spectra_tonorm['wave'] >= 379.26) & (spectra_tonorm['wave'] <= 464.54)].copy()
+        vnir_1 = spectra_tonorm[(spectra_tonorm['wave'] >= 537.57) & (spectra_tonorm['wave'] <= 619.82)].copy()
+        vnir_2 = spectra_tonorm[(spectra_tonorm['wave'] >= 620.08) & (spectra_tonorm['wave'] <= 712.14)].copy()
+        vnir_3 = spectra_tonorm[(spectra_tonorm['wave'] >= 712.17) & (spectra_tonorm['wave'] <= 852.77)].copy()
 
         df_list = [uv, vis, vnir_1, vnir_2, vnir_3]
 
@@ -356,10 +366,12 @@ class Preprocess():
 
     # normalize by ChemCam method
     def norm3_CL(spectra):
+        
+        spectra_tonorm = spectra.copy()
 
-        uv = spectra[(spectra['wave'] >= 246.68) & (spectra['wave'] <= 338.42)].copy(deep=True)
-        vis = spectra[(spectra['wave'] >= 387.9) & (spectra['wave'] <= 469.1)].copy(deep=True)
-        vnir = spectra[(spectra['wave'] >= 492.65) & (spectra['wave'] <= 849.1)].copy(deep=True)
+        uv = spectra_tonorm[(spectra_tonorm['wave'] >= 246.68) & (spectra_tonorm['wave'] <= 338.42)].copy()
+        vis = spectra_tonorm[(spectra_tonorm['wave'] >= 387.9) & (spectra_tonorm['wave'] <= 469.1)].copy()
+        vnir = spectra_tonorm[(spectra_tonorm['wave'] >= 492.65) & (spectra_tonorm['wave'] <= 849.1)].copy()
 
         df_list = [uv, vis, vnir]
 
@@ -369,10 +381,12 @@ class Preprocess():
 
     # normalize by SuperLIBS 10K method
     def norm3_SL_10K(spectra):
+        
+        spectra_tonorm = spectra.copy()
 
-        uv = spectra[(spectra['wave'] >= 233.12) & (spectra['wave'] <= 351.35)].copy(deep=True)
-        vis = spectra[(spectra['wave'] >= 370.16) & (spectra['wave'] <= 479.07)].copy(deep=True)
-        vnir = spectra[(spectra['wave'] >= 498.14) & (spectra['wave'] <= 859.44)].copy(deep=True)
+        uv = spectra_tonorm[(spectra_tonorm['wave'] >= 233.12) & (spectra_tonorm['wave'] <= 351.35)].copy()
+        vis = spectra_tonorm[(spectra_tonorm['wave'] >= 370.16) & (spectra_tonorm['wave'] <= 479.07)].copy()
+        vnir = spectra_tonorm[(spectra_tonorm['wave'] >= 498.14) & (spectra_tonorm['wave'] <= 859.44)].copy()
 
         df_list = [uv, vis, vnir]
 
@@ -382,10 +396,12 @@ class Preprocess():
 
     # normalize by SuperLIBS 18K method
     def norm3_SL_18K(spectra):
+        
+        spectra_tonorm = spectra.copy()
 
-        uv = spectra[(spectra['wave'] >= 233.12) & (spectra['wave'] <= 351.35)].copy(deep=True)
-        vis = spectra[(spectra['wave'] >= 370.16) & (spectra['wave'] <= 479.07)].copy(deep=True)
-        vnir = spectra[(spectra['wave'] >= 508.3) & (spectra['wave'] <= 869.2)].copy(deep=True)
+        uv = spectra_tonorm[(spectra_tonorm['wave'] >= 233.12) & (spectra_tonorm['wave'] <= 351.35)].copy()
+        vis = spectra_tonorm[(spectra_tonorm['wave'] >= 370.16) & (spectra_tonorm['wave'] <= 479.07)].copy()
+        vnir = spectra_tonorm[(spectra_tonorm['wave'] >= 508.3) & (spectra_tonorm['wave'] <= 869.2)].copy()
 
         df_list = [uv, vis, vnir]
 
