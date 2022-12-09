@@ -743,8 +743,12 @@ class Model():
         return 'NA', rmsecv, model
     
     def run_kNN(self, max_neighbors):
-        
-        neighbor_range = np.arange(1,max_neighbors)
+
+        if max_neighbors > 1:
+            neighbor_range = np.arange(1,max_neighbors)
+        else:
+            neighbor_range = [1]
+            
         weight_range = ['uniform','distance']
 
         cv_dict = dict()
