@@ -13,7 +13,7 @@ from model_tools import *
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 24 October 2022
+Last updated 9 December 2022
 
 Train spectral calibration standards with PLS and/or LASSO modelling. 
 Optionally use one fold of standards as test set.

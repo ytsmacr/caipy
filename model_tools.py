@@ -25,7 +25,7 @@ from sklearn.pipeline import Pipeline
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 26 October 2022
+Last updated 9 December 2022
 
 Helper functions and classes used by other programs in auto-modelling.
 '''
