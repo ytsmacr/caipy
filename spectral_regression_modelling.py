@@ -8,12 +8,13 @@ import os
 import pickle
 import re
 import time
+import argparse
 
 from model_tools import *
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 9 December 2022
+Last updated 04 May 2023
 
 Train spectral calibration standards with PLS and/or LASSO modelling. 
 Optionally use one fold of standards as test set.
@@ -94,19 +95,53 @@ non_linear_methods = ['SVR-py', 'PCR-lin', 'PCR-py', 'RF', 'GBR', 'kNN']
 #-------------------#
 # INPUT INFORMATION #
 #-------------------#
-data_folder, all_files = get_data_folder()
-spectra_path = get_spectra_path(data_folder, all_files)
-meta_path = get_meta_path(data_folder, all_files)
-outpath = get_out_folder()
+
+# from arguments
+parser = argparse.ArgumentParser()
+
+parser.add_argument('-f', '--datafolder', type=str, default=None, help='Path of folder with data')
+parser.add_argument('-o', '--outpath', type=str, default=None, help='Path of folder to output results')
+parser.add_argument('-s', '--spectra', default=None, help='Spectra dataframe')
+parser.add_argument('-m', '--metadata', default=None, help='Metadata dataframe')
+parser.add_argument('-std', '--standard', type=bool, default=None, help='Boolean of whether to follow a standard procedure or customize per variable')
+parser.add_argument('-dt', '--do_test', type=bool, default=None, help='Boolean of whether to hold a fold out as test data')
+parser.add_argument('-mt', '--method', type=str, default=None, help=f'Number corresponding to method selection from: {method_prompt}')
+parser.add_argument('-tf', '--test_fold', type=int, default=None, help='Integer of fold to be used for testing')
+
+args=parser.parse_args()
+
+data_folder = args.datafolder
+outpath = args.outpath
+spectra = args.spectra
+meta = args.metadata
+standard = args.standard
+do_test = args.do_test
+method_type = args.method
+test_fold = args.test_fold
+
+# from inputs
+if data_folder is None:
+    data_folder, all_files = get_data_folder()
+else:
+    all_files = os.listdir(data_folder)
+
+if outpath is None:
+    outpath = get_out_folder()
+
+# read in data
+if spectra is None:
+    spectra_path = get_spectra_path(data_folder, all_files)
+    spectra = pd.read_csv(spectra_path)
+
+if meta is None:
+    meta_path = get_meta_path(data_folder, all_files)
+    meta = pd.read_csv(meta_path)
     
 #----------------#
 # PREP PROCEDURE #
 #----------------#
-# read in data
-print('\nLoading data')
-spectra = pd.read_csv(spectra_path)
+# wavelength axis to store for later
 axis = list(spectra['wave'].values)
-meta = pd.read_csv(meta_path)
 
 # check data in same order
 check = list(spectra.columns[1:]) == list(meta['pkey'].values)
@@ -122,25 +157,29 @@ all_var = ', '.join(var_to_run)
 print('Identified variable(s) to model:', all_var)
 
 # check if run same procedure for all var
-standard = False
-if len(var_to_run) > 1:
-    standard = make_bool(input(std_prompt).lower())
-    while standard == 'error':
-        print('Error: Input needs to be either y or n')
+if standard is None:
+    standard = False
+    if len(var_to_run) > 1:
         standard = make_bool(input(std_prompt).lower())
+        while standard == 'error':
+            print('Error: Input needs to be either y or n')
+            standard = make_bool(input(std_prompt).lower())
 
 # if so, get parameters
 if standard:
-    do_test = make_bool(input(test_prompt).lower())
-    
-    while do_test == 'error':
-        print('Error: Input needs to be either y or n')
+    if do_test is None:
         do_test = make_bool(input(test_prompt).lower())
+
+        while do_test == 'error':
+            print('Error: Input needs to be either y or n')
+            do_test = make_bool(input(test_prompt).lower())
     if do_test:
-        test_fold = int(input(test_prompt2))
+        if test_fold is None:
+            test_fold = int(input(test_prompt2))
     
     while True:
-        method_type = input(method_prompt)
+        if method_type is None:
+            method_type = input(method_prompt)
         div = ',' if ',' in method_type else ' '
         method_types = [int(x) for x in method_type.split(div)]
         if set(method_types).issubset(set(method_dict.keys())):
@@ -200,9 +239,11 @@ for var in var_to_run:
     
     # ask for testing and method choice if not standardized procedure
     if not standard:
-        do_test = make_bool(input(test_prompt).lower())
-        if do_test:
-            test_fold = int(input(test_prompt2))
+        if do_test is None:
+            do_test = make_bool(input(test_prompt).lower())
+            if do_test:
+                if test_fold is None:
+                    test_fold = int(input(test_prompt2))
 
     # get data in the correct format for CV
     if do_test:
