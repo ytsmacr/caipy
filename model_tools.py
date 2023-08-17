@@ -25,7 +25,7 @@ from sklearn.pipeline import Pipeline
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 9 December 2022
+Last updated 16 August 2023
 
 Helper functions and classes used by other programs in auto-modelling.
 '''
@@ -35,7 +35,6 @@ Helper functions and classes used by other programs in auto-modelling.
 ########################
 # check format of input .asc filename
 def check_asc(filename):
-
     if filename[-4:] != '.asc':
         filename = filename + '.asc'
 
@@ -43,7 +42,6 @@ def check_asc(filename):
 
 # check format of input .csv filename
 def check_csv(filename):
-
     if filename[-4:] != '.csv':
         filename = filename + '.csv'
 
@@ -51,10 +49,8 @@ def check_csv(filename):
 
 # convert y/n response to boolean
 def make_bool(val):
-    
     if val not in ['y','n']:
         return 'error'
-
     if val == 'y':
         return True
     elif val == 'n':
@@ -70,71 +66,46 @@ def isfloat(num):
     
 # convert spectra df to np array for modelling
 def convert_spectra(spectra):
-    
     first_col = spectra.columns[0]
-    
     if first_col != 'wave':
         cont = make_bool(input(f'Warning: convert_spectra assumes the first column is the wavelength axis and ignores it. The first column of your data is {first_col}. Continue? (y/n):'))
         if not cont:
             raise ValueError('Aborting')
-    
-    spec_list = []
-    for column in spectra.columns[1:]:
-        spectrum = list(spectra[column])
-        spec_list.append(spectrum)
 
-    conv_spectra = np.array(spec_list)
-
+    conv_spectra = np.array(spectra[spectra.columns[1:]].T)
     return conv_spectra
 
 # select spectra from df and convert to array for modelling
 def select_spectra(spectra, sample_names):
-
-    spec_list = []
-    for column in sample_names:
-        spectrum = list(spectra[column])
-        spec_list.append(spectrum)
-
-    conv_spectra = np.array(spec_list)
-
+    conv_spectra = np.array(spectra[sample_names].T)
     return conv_spectra
 
 # get min axis value for plotting
 def get_min(value, buffer=0.1):
-
     if value > 0:
         value = 0
     else:
         value = value + (buffer * value)
-    
     return value
 
 # get max axis value for plotting
 def get_max(value, buffer=0.1):
-
     if value > 0:
         value = value + (buffer * value)
     else:
         value = 0
-
     return value
 
 # for choosing best parameter during CV
 def get_first_local_minimum(li):
-    
     min = li[0]
-
     for i in li[1:]:
-        
         if i < min:
-            min = i
-            
+            min = i   
         elif i > min:
             return min
-        
         elif i == min:
             continue
-    
     # in case the last point is the lowest
     return min
 
@@ -442,7 +413,7 @@ class Format():
         n_samples_list = []
 
         # remove test data if using it
-        if test_fold:
+        if test_fold is not None:
             temp_meta = self.meta[self.meta[fold_col] != test_fold].copy()
         else:
             temp_meta = self.meta.copy()
@@ -478,8 +449,7 @@ class Format():
 
     # convert data to correct format for modelling
     def format_spectra_meta(self, var, fold_col, test_fold=None):
-
-        if test_fold:
+        if test_fold is not None:
             # training
             train_meta = self.meta[(~self.meta[fold_col].isin([-1, test_fold])) &
                               (~self.meta[fold_col].isnull())]
@@ -495,7 +465,6 @@ class Format():
             X_test = select_spectra(self.spectra, test_names)
 
             return train_names, X_train, y_train, test_names, X_test, y_test
-
         else:
             train_meta = self.meta[(self.meta[fold_col] != -1) &
                               (~self.meta[fold_col].isnull())]
@@ -513,8 +482,9 @@ class Model():
     Functions that optimize regression models
     '''
     
-    def __init__(self, data_dict):
+    def __init__(self, data_dict, hide_progress=False):
         self.data_dict = data_dict
+        self.hide_progress = hide_progress
             
     # perform manual CV using data_dict and return RMSECV
     def run_CV(self, model):
@@ -547,7 +517,7 @@ class Model():
         component_range = np.arange(start=2, stop=max_components+1, step=1)
 
         cv_dict = {}
-        for n_components in tqdm(component_range, desc='component value'):
+        for n_components in tqdm(component_range, desc='component value', disable=self.hide_progress):
             # define model
             model = PLSRegression(n_components = n_components, scale=False)
             # run CV and get RMSE
@@ -558,8 +528,9 @@ class Model():
         rmsecv = get_first_local_minimum(list(cv_dict.keys()))
         component = cv_dict[rmsecv]
         model = PLSRegression(n_components = component, scale=False)
-        
-        print(f'\tLowest RMSE-CV of {round(rmsecv,2)} obtained from {component}-component model')
+
+        if self.hide_progress is False:
+           print(f'\tLowest RMSE-CV of {round(rmsecv,2)} obtained from {component}-component model')
             
         return component, rmsecv, model
 
@@ -568,7 +539,7 @@ class Model():
         alpha_range = np.logspace(-10, 1, num_alphas)
 
         cv_dict = dict()
-        for alpha in tqdm(alpha_range, desc='alpha value'):
+        for alpha in tqdm(alpha_range, desc='alpha value', disable=self.hide_progress):
             model = Lasso(alpha=alpha)
             temp_rmsecv = Model.run_CV(self, model)
             cv_dict[temp_rmsecv] = alpha
@@ -577,7 +548,8 @@ class Model():
         alpha = cv_dict[rmsecv]
         model = Lasso(alpha=alpha)
         
-        print(f'\tLowest RMSE-CV of {round(rmsecv,2)} obtained from model with an alpha of {round(alpha,5)}')
+        if self.hide_progress is False:
+           print(f'\tLowest RMSE-CV of {round(rmsecv,2)} obtained from model with an alpha of {round(alpha,5)}')
             
         return alpha, rmsecv, model
             
@@ -586,7 +558,7 @@ class Model():
         alpha_range = np.logspace(-10, 1, num_alphas)
         
         cv_dict = dict()
-        for alpha in tqdm(alpha_range, desc='alpha value'):
+        for alpha in tqdm(alpha_range, desc='alpha value', disable=self.hide_progress):
             model = Ridge(alpha=alpha)
             temp_rmsecv = Model.run_CV(self, model)
             cv_dict[temp_rmsecv] = alpha
@@ -595,7 +567,8 @@ class Model():
         alpha = cv_dict[rmsecv]
         model = Ridge(alpha=alpha)
         
-        print(f'\tLowest RMSE-CV of {round(rmsecv,2)} obtained from model with an alpha of {round(alpha,5)}')
+        if self.hide_progress is False:
+           print(f'\tLowest RMSE-CV of {round(rmsecv,2)} obtained from model with an alpha of {round(alpha,5)}')
             
         return alpha, rmsecv, model
     
@@ -607,8 +580,8 @@ class Model():
         alpha_range = np.logspace(-7, 1, num_alphas)
 
         cv_dict = dict()
-        for ratio in tqdm(ratio_range, desc='L1 ratio', leave=False):
-            for alpha in tqdm(alpha_range, desc='alpha value', leave=False):
+        for ratio in tqdm(ratio_range, desc='L1 ratio', leave=False, disable=self.hide_progress):
+            for alpha in tqdm(alpha_range, desc='alpha value', leave=False, disable=self.hide_progress):
                 model = ElasticNet(alpha=alpha, l1_ratio=ratio)
                 temp_rmsecv = Model.run_CV(self, model)
                 cv_dict[temp_rmsecv] = [alpha, ratio]
@@ -617,7 +590,8 @@ class Model():
         params = cv_dict[rmsecv]
         model = ElasticNet(alpha=params[0], l1_ratio=params[1])
         
-        print(f'\tLowest RMSE-CV of {round(rmsecv,2)} obtained from model with an alpha of {round(params[0],5)} and an l1_ratio of {params[1]}')
+        if self.hide_progress is False:
+           print(f'\tLowest RMSE-CV of {round(rmsecv,2)} obtained from model with an alpha of {round(params[0],5)} and an l1_ratio of {params[1]}')
         param = f'alpha={params[0]} l1_ratio={params[1]}'
             
         return param, rmsecv, model    
@@ -629,7 +603,7 @@ class Model():
         epsilon_range = np.logspace(-4, 1, num_epsilons)
 
         cv_dict = dict()
-        for epsilon in tqdm(epsilon_range, desc='epsilon value'):
+        for epsilon in tqdm(epsilon_range, desc='epsilon value', disable=self.hide_progress):
             model = SVR(kernel='linear', epsilon=epsilon)
             temp_rmsecv = Model.run_CV(self, model)
             cv_dict[temp_rmsecv] = epsilon
@@ -638,7 +612,8 @@ class Model():
         epsilon = cv_dict[rmsecv]
         model = SVR(kernel='linear', epsilon=epsilon)
         
-        print(f'\tLowest RMSE-CV of {round(rmsecv,2)} obtained from model with an epsilon of {round(epsilon,5)}')
+        if self.hide_progress is False:
+           print(f'\tLowest RMSE-CV of {round(rmsecv,2)} obtained from model with an epsilon of {round(epsilon,5)}')
             
         return epsilon, rmsecv, model
     
@@ -649,7 +624,7 @@ class Model():
         epsilon_range = np.logspace(-4, 1, num_epsilons)
 
         cv_dict = dict()
-        for epsilon in tqdm(epsilon_range, desc='epsilon value'):
+        for epsilon in tqdm(epsilon_range, desc='epsilon value', disable=self.hide_progress):
             model = SVR(kernel='poly', degree=poly_deg, epsilon=epsilon)
             temp_rmsecv = Model.run_CV(self, model)
             cv_dict[temp_rmsecv] = epsilon
@@ -658,7 +633,8 @@ class Model():
         epsilon = cv_dict[rmsecv]
         model = SVR(kernel='poly', degree=poly_deg, epsilon=epsilon)
         
-        print(f'\tLowest RMSE-CV of {round(rmsecv,2)} obtained from model with an epsilon of {round(epsilon,5)}')
+        if self.hide_progress is False:
+           print(f'\tLowest RMSE-CV of {round(rmsecv,2)} obtained from model with an epsilon of {round(epsilon,5)}')
             
         return epsilon, rmsecv, model
     
@@ -669,7 +645,8 @@ class Model():
         model = Pipeline([('PCA', PCA()), ('linear', LinearRegression())])
         rmsecv = Model.run_CV(self, model)
         
-        print(f'\tRMSE-CV of {round(rmsecv,2)} obtained from model')
+        if self.hide_progress is False:
+           print(f'\tRMSE-CV of {round(rmsecv,2)} obtained from model')
             
         return 'NA', rmsecv, model
     
@@ -682,7 +659,8 @@ class Model():
         model = Pipeline([('PCA',pca), ('linear', LinearRegression())])
         rmsecv = Model.run_CV(self, model)
         
-        print(f'\tRMSE-CV of {round(rmsecv,2)} obtained from model')
+        if self.hide_progress is False:
+           print(f'\tRMSE-CV of {round(rmsecv,2)} obtained from model')
         
         return 'NA', rmsecv, model
     
@@ -692,7 +670,8 @@ class Model():
         model = OrthogonalMatchingPursuit()
         rmsecv = Model.run_CV(self, model)
         
-        print(f'\tRMSE-CV of {round(rmsecv,2)} obtained from model')
+        if self.hide_progress is False:
+           print(f'\tRMSE-CV of {round(rmsecv,2)} obtained from model')
         
         return 'NA', rmsecv, model
     
@@ -701,7 +680,7 @@ class Model():
         feat_range = ['sqrt', 'log2'] # `None` took long
 
         cv_dict = dict()
-        for feat in tqdm(feat_range, desc='max features'):
+        for feat in tqdm(feat_range, desc='max features', disable=self.hide_progress):
             model = RandomForestRegressor(max_features=feat)
             temp_rmsecv = Model.run_CV(self, model)
             cv_dict[temp_rmsecv] = feat
@@ -710,7 +689,8 @@ class Model():
         feat = cv_dict[rmsecv]
         model = RandomForestRegressor(max_features=feat)
         
-        print(f'\tLowest RMSE-CV of {round(rmsecv,2)} obtained from model with {feat} max features')
+        if self.hide_progress is False:
+           print(f'\tLowest RMSE-CV of {round(rmsecv,2)} obtained from model with {feat} max features')
             
         return feat, rmsecv, model
     
@@ -719,7 +699,7 @@ class Model():
         feat_range = ['sqrt', 'log2'] # `None` took long
 
         cv_dict = dict()
-        for feat in tqdm(feat_range, desc='max features'):
+        for feat in tqdm(feat_range, desc='max features', disable=self.hide_progress):
             model = GradientBoostingRegressor(random_state=0, max_features=feat)
             temp_rmsecv = Model.run_CV(self, model)
             cv_dict[temp_rmsecv] = feat
@@ -728,7 +708,8 @@ class Model():
         feat = cv_dict[rmsecv]
         model = GradientBoostingRegressor(random_state=0, max_features=feat)
         
-        print(f'\tRMSE-CV of {round(rmsecv,2)} obtained from model with {feat} max features')
+        if self.hide_progress is False:
+           print(f'\tRMSE-CV of {round(rmsecv,2)} obtained from model with {feat} max features')
         
         return feat, rmsecv, model
     
@@ -738,7 +719,8 @@ class Model():
         model = LinearRegression()
         rmsecv = Model.run_CV(self, model)
         
-        print(f'\tRMSE-CV of {round(rmsecv,2)} obtained from model')
+        if self.hide_progress is False:
+           print(f'\tRMSE-CV of {round(rmsecv,2)} obtained from model')
         
         return 'NA', rmsecv, model
     
@@ -752,7 +734,7 @@ class Model():
         weight_range = ['uniform','distance']
 
         cv_dict = dict()
-        for neighbor in tqdm(neighbor_range, desc='# neighbors'):
+        for neighbor in tqdm(neighbor_range, desc='# neighbors', disable=self.hide_progress):
             for weight in weight_range:
                 model = KNeighborsRegressor(n_neighbors=neighbor, weights=weight)
                 temp_rmsecv = Model.run_CV(self, model)
@@ -762,7 +744,8 @@ class Model():
         params = cv_dict[rmsecv]
         model = KNeighborsRegressor(n_neighbors=params[0], weights=params[1])
         
-        print(f'\tLowest RMSE-CV of {round(rmsecv,2)} obtained from model with {round(params[0],5)} neighbors and {params[1]} weights')
+        if self.hide_progress is False:
+           print(f'\tLowest RMSE-CV of {round(rmsecv,2)} obtained from model with {round(params[0],5)} neighbors and {params[1]} weights')
         param = f'n_neighbors={params[0]} weights={params[1]}'
         
         return param, rmsecv, model

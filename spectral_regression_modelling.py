@@ -14,7 +14,7 @@ from model_tools import *
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 2 August 2023
+Last updated 16 August 2023
 
 Train spectral calibration standards with PLS and/or LASSO modelling. 
 Optionally use one fold of standards as test set.
@@ -109,7 +109,6 @@ parser.add_argument('-mt', '--method', type=str, default=None, help=f'Number cor
 parser.add_argument('-tf', '--test_fold', type=int, default=None, help='Integer of fold to be used for testing')
 
 args=parser.parse_args()
-
 data_folder = args.datafolder.replace("'","")
 outpath = args.outpath.replace("'","")
 spectra_path = args.spectra_name.replace("'","")
@@ -206,6 +205,9 @@ if standard:
 #---------------#
 # RUN PROCEDURE #
 #---------------#
+# show the progress bars and results of CV
+hide_progress=False
+            
 # prep lists for results df
 n_train_list = []
 rmsecv_list = []
