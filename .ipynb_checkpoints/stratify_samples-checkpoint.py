@@ -37,6 +37,7 @@ parser.add_argument('-n', '--n_folds', type=int, default=None, help='Number of f
 
 args=parser.parse_args()
 meta_file = args.meta_file.replace("'","")
+#meta_file = args.meta_file.replace('"','')
 n_folds = args.n_folds
 
 # input information

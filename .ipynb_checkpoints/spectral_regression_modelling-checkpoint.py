@@ -103,10 +103,15 @@ parser.add_argument('-f', '--datafolder', type=str, default=None, help='Path of 
 parser.add_argument('-o', '--outpath', type=str, default=None, help='Path of folder to output results')
 parser.add_argument('-s', '--spectra_name', type=str, default=None, help='Spectra filename')
 parser.add_argument('-m', '--meta_name', type=str, default=None, help='Metadata filename')
-parser.add_argument('-std', '--standard', action='store_true', help='Follow a standard procedure or customize per variable')
-parser.add_argument('-dt', '--do_test', action='store_true', help='Hold a fold out as test data')
+parser.add_argument('-std', '--standard', action='store_true', help='Follow a standard procedure for each variable (leave blank if custom)')
+parser.add_argument('-dt', '--do_test', action='store_true', help='Holds a fold out as test data')
 parser.add_argument('-mt', '--method', type=str, default=None, help=f'Number corresponding to method selection from: {method_prompt}')
 parser.add_argument('-tf', '--test_fold', type=int, default=None, help='Integer of fold to be used for testing')
+parser.add_argument('-hp', '--hide_progress', action='store_true', help='Hides progress bars')
+parser.add_argument('-mc', '--max_components', type=int, default=None, help='Sets the maximum PLS components')
+parser.add_argument('-np', '--num_params', type=int, default=None, help='Sets the number of values to test for LASSO, Ridge, ElasticNet, SVR')
+parser.add_argument('-pd', '--poly_deg', type=int, default=None, help='Sets the polynomial degree for SVR and kernel PCR')
+parser.add_argument('-mn', '--max_neighbors', type=int, default=None, help='Sets the maximum number of neighbors for kNN')
 
 args=parser.parse_args()
 data_folder = args.datafolder.replace("'","")
@@ -117,6 +122,11 @@ standard = args.standard
 do_test = args.do_test
 method_type = args.method.replace("'","")
 test_fold = args.test_fold
+hide_progress = args.hide_progress
+max_components_ = args.max_components
+num_params_ = args.num_params
+poly_deg_ = args.poly_deg
+max_neighbors_ = args.max_neighbors
 
 # from inputs
 if data_folder is None:
@@ -139,6 +149,20 @@ if meta_path is None:
     meta = pd.read_csv(meta_path)
 else:
     meta = pd.read_csv(f'{data_folder}\\{meta_path}')
+
+# show the progress bars and results of CV
+if hide_progress is None:
+    hide_progress = False
+
+if max_components_ is None:
+    max_components_ = 30
+if num_params_ is None:
+    num_params_ = 30
+if poly_deg_ is None:
+    poly_deg_ = 2
+if max_neighbors_ is None:
+    max_neighbors_ = 40
+    
 #----------------#
 # PREP PROCEDURE #
 #----------------#
@@ -204,10 +228,7 @@ if standard:
             
 #---------------#
 # RUN PROCEDURE #
-#---------------#
-# show the progress bars and results of CV
-hide_progress=False
-            
+#---------------#            
 # prep lists for results df
 n_train_list = []
 rmsecv_list = []
@@ -231,13 +252,13 @@ for var in var_to_run:
     
     # RESET MODEL PARAMETERS
     #maximum number of components for PLS
-    max_components = 30
+    max_components = max_components_
     # number of values to test for LASSO, Ridge, ElasticNet, SVR
-    num_params = 30
+    num_params = num_params_
     # polynomial degree for SVR and kernel PCR
-    poly_deg = 2
+    poly_deg = poly_deg_
     # maximum number of neighbors for kNN
-    max_neighbors = 40
+    max_neighbors = max_neighbors_
     
     print(f'\nRunning for {var}')
     fold_col = form.get_fold_col(var)
@@ -292,7 +313,7 @@ for var in var_to_run:
                 print(f"Error: Input must be one of {all_methods}")
 
     # initiate modelling class with data dictionary
-    modelling = Model(data_dict)
+    modelling = Model(data_dict, hide_progress)
     # functions and arguments per method
     reg_cv_dict = {
         'PLS':{'func':modelling.run_PLS,
@@ -329,7 +350,7 @@ for var in var_to_run:
     for method in methods_torun:
         
         # optimize models with CV
-        print(f'\nPerforming CV for {method}:')
+        print(f'\nPerforming CV for {method}')
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             if type(reg_cv_dict[method]['args']) == int: # if has arguments...
@@ -340,7 +361,7 @@ for var in var_to_run:
                 param, rmsecv, model = reg_cv_dict[method]['func']()
             
         # get data in format for full model
-        print(f'\nTraining model:')
+        print(f'\nTraining model')
         if do_test:
             train_names, X_train, y_train, test_names, X_test, y_test = form.format_spectra_meta(var, fold_col, test_fold)
         else:
@@ -359,7 +380,7 @@ for var in var_to_run:
         
         else:       
             # special cases here
-            if method in ['SVR-lin','PLS']:
+            if method in ['SVR-lin']:
                 coef_list = list(model.coef_[0])
                 intercept = model.intercept_[0]               
             else:
@@ -422,7 +443,7 @@ for var in var_to_run:
 
         # optional testing
         if do_test:
-            print(f'\nTesting model:')
+            print(f'\nTesting model')
             # TEST PREDICTIONS
             test_preds = model.predict(X_test)
             test_pred_true = pd.DataFrame({
