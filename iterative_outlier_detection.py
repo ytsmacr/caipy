@@ -404,10 +404,10 @@ while to_continue is True:
         per_diff_list.append(per_diff)
     
         # remove outlier and prep for next iteration
-        meta = meta[meta[id_col]!=outlier].reset_index(drop=True)
-        cols = list(meta.pkey)
+        meta_ = meta_[meta_[id_col]!=outlier].reset_index(drop=True)
+        cols = list(meta_.pkey)
         cols.insert(0,'wave')
-        spectra = spectra[cols]
+        spectra_ = spectra_[cols]
     
         count+=1
 
@@ -434,13 +434,13 @@ while to_continue is True:
                     print(f'Halting procedure: Reached the maximum of {n_outliers} outliers, which was defined as ~{round(threshold_value*100)}% of all samples')
                 to_continue = False
     
-# collate results
-outlier_result_df = pd.DataFrame({
-    'outlier':outlier_list,
-    'avg_train_RMSE':rmse_list,
-    'difference':diff_list,
-    'percent_difference':per_diff_list
-})
-# export
-outfile = os.path.join(outfolder, f'iterative_outlier_results_{variable.replace("/","-")}_{outlier_method}_{ml_method}_threshold_{round(threshold_value,1)}_{threshold_type}.csv')
-outlier_result_df.to_csv(outfile, index=False)
+    # collate results
+    outlier_result_df = pd.DataFrame({
+        'outlier':outlier_list,
+        'avg_train_RMSE':rmse_list,
+        'difference':diff_list,
+        'percent_difference':per_diff_list
+    })
+    # export
+    outfile = os.path.join(outfolder, f'iterative_outlier_results_{variable.replace("/","-")}_{outlier_method}_{ml_method}_threshold_{round(threshold_value,1)}_{threshold_type}.csv')
+    outlier_result_df.to_csv(outfile, index=False)
