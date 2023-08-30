@@ -13,11 +13,12 @@ import argparse
 This module finds outliers by their poor predictions
 
 by Cai Ytsma
-last updated 25 August 2023
+last updated 30 August 2023
 
 TO DO: 
 [] Adjust threshold type to accept a list of multiple (like ML methods for automodelling)
 [] Make ML parameters callable arguments (leaving static for now)
+[] Change it to write directly to the file rather than build and export a dataframe each time
 '''
 ###################################
 '''
@@ -346,15 +347,11 @@ if threshold_type == 'percent_samples':
 sample_dict = dict(zip(meta['Folds'], meta[id_col]))
 # sample to variable value key
 var_dict = dict(zip(meta[id_col], meta[variable]))
-        
-# copy them to avoid writing over
-spectra_ = spectra.copy()
-meta_ = meta.copy()
 
 ### BEGIN ###
 while to_continue is True:
     # prep data formatting
-    form = Format(spectra_, meta_)
+    form = Format(spectra, meta)
     fold_col = form.get_fold_col(variable)
 
     # get original RMSEC
@@ -368,7 +365,7 @@ while to_continue is True:
 
     print(f'Finding outlier #{count}')
     result_data = []
-    for test_fold in tqdm(list(meta_.Folds.unique()), desc='Sample', leave=False):
+    for test_fold in tqdm(list(meta.Folds.unique()), desc='Sample', leave=False):
         sample = sample_dict[test_fold]
         # make model
         if outlier_method == 'per_sample':
@@ -404,34 +401,37 @@ while to_continue is True:
         per_diff_list.append(per_diff)
     
         # remove outlier and prep for next iteration
-        meta_ = meta_[meta_[id_col]!=outlier].reset_index(drop=True)
-        cols = list(meta_.pkey)
+        meta = meta[meta[id_col]!=outlier].reset_index(drop=True)
+        cols = list(meta.pkey)
         cols.insert(0,'wave')
-        spectra_ = spectra_[cols]
+        spectra = spectra[cols]
     
         count+=1
 
         # see if passes a breakage threshold
+        if current_rmse == 0:
+            print('Exiting procedure: Reached 0 RMSE')
+            to_continue = False
         if threshold_type == 'max_iter':
             if count >= threshold_value+1:
-                print('Halting procedure: Reached maximum number of iterations')
+                print('Exiting procedure: Reached maximum number of iterations')
                 to_continue = False
         if threshold_type == 'rmse':
             if current_rmse <= threshold_value:
                 if to_continue is True:
-                    print(f'Halting procedure: Current training RMSE of {round(current_rmse,2)} below threshold of {threshold_value}')
+                    print(f'Exiting procedure: Current training RMSE of {round(current_rmse,2)} below threshold of {threshold_value}')
                 to_continue = False
         if threshold_type == 'percent_diff':
             if per_diff <= threshold_value:
                 if to_continue is True:
-                    print(f'Halting procedure: Training RMSE after last outlier removal has a difference to the previous model below the threshold of {threshold_value}%')
+                    print(f'Exiting procedure: Training RMSE after last outlier removal has a difference to the previous model below the threshold of {threshold_value}%')
                 to_continue = False
         if threshold_type == 'percent_samples':
             n_outliers = count-1
             # don't subtract 1 because checking to see if a new outlier would push it over the threshold
             if n_outliers == max_n_outliers:
                 if to_continue is True:
-                    print(f'Halting procedure: Reached the maximum of {n_outliers} outliers, which was defined as ~{round(threshold_value*100)}% of all samples')
+                    print(f'Exiting procedure: Reached the maximum of {n_outliers} outliers, which was defined as ~{round(threshold_value*100)}% of all samples')
                 to_continue = False
     
     # collate results
