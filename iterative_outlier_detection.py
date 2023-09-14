@@ -8,12 +8,13 @@ from tqdm.notebook import tqdm
 from matplotlib import pyplot as plt
 from scipy.stats import iqr
 import argparse
+import time
 
 '''
 This module finds outliers by their poor predictions
 
 by Cai Ytsma
-last updated 30 August 2023
+last updated 14 September 2023
 
 TO DO: 
 [] Adjust threshold type to accept a list of multiple (like ML methods for automodelling)
@@ -302,6 +303,7 @@ def identify_outlier(df, train_col, test_col):
 RUN PROCEDURE
 '''
 print(f'Performing iterative outlier removal {outlier_method} for variable {variable} with a {threshold_type} stopping threshold of {threshold_value}, using a {ml_method} regression')
+start_time = time.time()
 
 # universal variables
 train_col = 'avg_train_RMSE'
@@ -444,3 +446,7 @@ while to_continue is True:
     # export
     outfile = os.path.join(outfolder, f'iterative_outlier_results_{variable.replace("/","-")}_{outlier_method}_{ml_method}_threshold_{round(threshold_value,1)}_{threshold_type}.csv')
     outlier_result_df.to_csv(outfile, index=False)
+
+end_time = time.time()
+elapsed_min = round((end_time - start_time)/60)
+print(f'Procedure completed in {elapsed_min} minutes')
