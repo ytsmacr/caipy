@@ -14,7 +14,7 @@ from model_tools import *
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 16 August 2023
+Last updated 15 September 2023
 
 Train spectral calibration standards with PLS and/or LASSO modelling. 
 Optionally use one fold of standards as test set.
@@ -137,6 +137,10 @@ else:
 if outpath is None:
     outpath = get_out_folder()
 
+# make folder if it doesn't already exist
+if not os.path.exists(outpath):
+    os.mkdir(outpath)    
+    
 # read in data
 if spectra_path is None:
     spectra_path = get_spectra_path(data_folder, all_files)

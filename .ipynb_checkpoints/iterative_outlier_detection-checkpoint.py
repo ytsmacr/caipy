@@ -221,9 +221,15 @@ def get_model_results(method, formatted_data, variable, fold_col, test_fold=None
         param, rmsecv, model = reg_cv_dict[method]['func']()
     # prep data for training
     if test_fold is not None:
-        train_names, X_train, y_train, test_names, X_test, y_test = form.format_spectra_meta(variable, fold_col, test_fold)
+        (train_names, 
+         X_train, 
+         y_train, 
+         test_names, 
+         X_test, 
+         y_test) = formatted_data.format_spectra_meta(variable, fold_col, test_fold)    
+        
     else:
-        train_names, X_train, y_train = form.format_spectra_meta(variable, fold_col)              
+        train_names, X_train, y_train = formatted_data.format_spectra_meta(variable, fold_col)              
     model.fit(X_train, y_train)
     # get RMSE-C
     train_preds = model.predict(X_train)
@@ -368,7 +374,9 @@ while to_continue is True:
     print(f'Finding outlier #{count}')
     result_data = []
     for test_fold in tqdm(list(meta.Folds.unique()), desc='Sample', leave=False):
+        print(test_fold)
         sample = sample_dict[test_fold]
+        print(sample)
         # make model
         if outlier_method == 'per_sample':
             rmsecv, rmsec, r2_train, rmsep = get_model_results(ml_method, 
@@ -378,7 +386,12 @@ while to_continue is True:
                                                                test_fold)
             results = [test_fold, sample, rmsecv, rmsec, r2_train, rmsep]
         elif outlier_method == 'per_spectrum':
-            rmsecv, rmsec, r2_train, diff = get_model_results(ml_method, form, variable, fold_col, test_fold, by_spectrum=True)
+            rmsecv, rmsec, r2_train, diff = get_model_results(ml_method, 
+                                                              form, 
+                                                              variable, 
+                                                              fold_col, 
+                                                              test_fold, 
+                                                              by_spectrum=True)
             results = [test_fold, sample, rmsecv, rmsec, r2_train, diff]
         result_data.append(results)
     # make df

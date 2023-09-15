@@ -449,7 +449,20 @@ class Format():
 
     # convert data to correct format for modelling
     def format_spectra_meta(self, var, fold_col, test_fold=None):
-        if test_fold is not None:
+        print(452)
+        print(test_fold)
+        if test_fold is None:
+            print(472)
+            train_meta = self.meta[(self.meta[fold_col] != -1) &
+                              (~self.meta[fold_col].isnull())]
+            y_train = train_meta[var].values
+            train_names = train_meta['pkey'].values
+            X_train = select_spectra(self.spectra, train_names)
+
+            return train_names, X_train, y_train
+        else:
+            print(454)
+            print(test_fold)
             # training
             train_meta = self.meta[(~self.meta[fold_col].isin([-1, test_fold])) &
                               (~self.meta[fold_col].isnull())]
@@ -460,19 +473,13 @@ class Format():
             # testing
             test_meta = self.meta[(self.meta[fold_col] == test_fold) &
                              (~self.meta[fold_col].isnull())]
+            print(465)
+            display(test_meta)
             y_test = test_meta[var].values
             test_names = test_meta['pkey'].values
             X_test = select_spectra(self.spectra, test_names)
 
             return train_names, X_train, y_train, test_names, X_test, y_test
-        else:
-            train_meta = self.meta[(self.meta[fold_col] != -1) &
-                              (~self.meta[fold_col].isnull())]
-            y_train = train_meta[var].values
-            train_names = train_meta['pkey'].values
-            X_train = select_spectra(self.spectra, train_names)
-
-            return train_names, X_train, y_train
 
 ##########################################        
 
