@@ -313,6 +313,7 @@ start_time = time.time()
 
 # universal variables
 train_col = 'avg_train_RMSE'
+fold_col = 'Outlier_Folds'
 to_continue = True
 count=1
 outlier_list = []
@@ -331,7 +332,7 @@ if outlier_method == 'per_sample':
         raise ValueError('Metadata file must have column "Sample_Name" to perform a per sample outlier detection method')
     # assign a fold per sample
     fold_df = pd.DataFrame(meta[id_col].unique()).reset_index()
-    fold_df.columns = ['Folds',id_col]
+    fold_df.columns = [fold_col,id_col]
     meta = meta.merge(fold_df, how='left')
 
 elif outlier_method == 'per_spectrum':
@@ -340,7 +341,7 @@ elif outlier_method == 'per_spectrum':
     id_col = 'pkey'
     n_samples = len(meta)
     # assign a fold per spectrum
-    meta = meta.reset_index().rename(columns={'index':'Folds'})
+    meta = meta.reset_index().rename(columns={'index':fold_col})
 
 ### GENERAL TO DEFINE ###
 if threshold_type == 'percent_samples':
@@ -352,7 +353,7 @@ if threshold_type == 'percent_samples':
         max_n_outliers = int(threshold_value * n_samples)
 
 # fold to sample key
-sample_dict = dict(zip(meta['Folds'], meta[id_col]))
+sample_dict = dict(zip(meta[fold_col], meta[id_col]))
 # sample to variable value key
 var_dict = dict(zip(meta[id_col], meta[variable]))
 
@@ -360,8 +361,6 @@ var_dict = dict(zip(meta[id_col], meta[variable]))
 while to_continue is True:
     # prep data formatting
     form = Format(spectra, meta)
-    fold_col = form.get_fold_col(variable)
-
     # get original RMSEC
     if count==1:
         rmsecv, rmsec, r2_train = get_model_results(ml_method, form, variable, fold_col)
@@ -373,7 +372,7 @@ while to_continue is True:
 
     print(f'Finding outlier #{count}')
     result_data = []
-    for test_fold in tqdm(list(meta.Folds.unique()), desc='Sample', leave=False):
+    for test_fold in tqdm(list(meta[fold_col].unique()), desc='Sample', leave=False):
         print(test_fold)
         sample = sample_dict[test_fold]
         print(sample)
