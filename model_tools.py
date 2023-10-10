@@ -85,7 +85,7 @@ def get_min(value, buffer=0.1):
     if value > 0:
         value = 0
     else:
-        value = value + (buffer * value)
+        value = value - (buffer * value)
     return value
 
 # get max axis value for plotting
