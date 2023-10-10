@@ -120,6 +120,10 @@ if any(spectra.columns[1:] != list(meta.pkey)):
 ### ASSIGN VARIABLES ###
 if outfolder is None:
     outfolder = get_out_folder()
+# make folder if it doesn't already exist
+if not os.path.exists(outfolder):
+    os.mkdir(outfolder)    
+
 if variable is None:
     variable = input(var_prompt)
     while variable not in meta.columns:
@@ -373,9 +377,7 @@ while to_continue is True:
     print(f'Finding outlier #{count}')
     result_data = []
     for test_fold in tqdm(list(meta[fold_col].unique()), desc='Sample', leave=False):
-        print(test_fold)
         sample = sample_dict[test_fold]
-        print(sample)
         # make model
         if outlier_method == 'per_sample':
             rmsecv, rmsec, r2_train, rmsep = get_model_results(ml_method, 
