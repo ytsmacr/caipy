@@ -97,7 +97,7 @@ A program to apply PLS2 models to spectra of samples with or without metadata. R
 Helper file that contains many of the functions and classes used by the above programs.
 
 ## Calibration model descriptions
-Descriptions adapted from Dyar et al. (XXX)
+Descriptions adapted from [Dyar et al. (2023)](https://doi.org/10.1016/j.chemgeo.2023.121605)
 
 ### [Ordinary Least Squares (OLS)](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LinearRegression.html)
 OLS is a standard linear regression method that chooses its coefficients by minimizing the sum of squares between the input data, **X**, and the independent variables, **y**. It assigns a weight to every channel in **X** and so provides interpretable values for the magnitude of the relationship between **X** and **y** at every point in the spectrum. OLS will always overfit to **X** because it is identical to the maximum likelihood estimator, and therefore can be useful as a ‘best’, albeit not useful, model to compare other linear calibration errors to.
