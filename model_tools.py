@@ -25,7 +25,7 @@ from sklearn.pipeline import Pipeline
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 16 August 2023
+Last updated 11 October 2023
 
 Helper functions and classes used by other programs in auto-modelling.
 '''
@@ -33,6 +33,7 @@ Helper functions and classes used by other programs in auto-modelling.
 ########################
 # STANDALONE FUNCTIONS #
 ########################
+
 # check format of input .asc filename
 def check_asc(filename):
     if filename[-4:] != '.asc':
@@ -95,6 +96,26 @@ def get_max(value, buffer=0.1):
     else:
         value = 0
     return value
+
+# get values for 1:1 line and then plot limits to refocus on data
+def get_limits_for_1_to_1_line(df, actual_col, pred_col):
+    # values for 1:1 line
+    plt_max = get_max(max(max(df[actual_col].values), max(df[pred_col].values)))       
+    plt_min = get_min(min(min(df[actual_col].values), min(df[pred_col].values)))
+    # get X plot limits
+    x_min = get_min(min(df[actual_col].values))
+    x_max = get_max(max(df[actual_col].values))
+    # get y plot limits
+    y_min = get_min(min(df[pred_col].values))
+    y_max = get_max(max(df[pred_col].values))
+    return {
+        'plt_max':plt_max, 
+        'plt_min':plt_min, 
+        'x_min':x_min,
+        'x_max':x_max,
+        'y_min':y_min,
+        'y_max':y_max
+    }
 
 # for choosing best parameter during CV
 def get_first_local_minimum(li):
@@ -170,7 +191,7 @@ class Preprocess():
 
         if spectra_to_match is None:
             print('Resampling to SuperCam -2px shifted wavelength axis by default')
-            spectra_to_match = pd.read_csv('data\\SuperCam_cal_shift-2pix_axis.csv')
+            spectra_to_match = pd.read_csv(os.path.join('data','SuperCam_cal_shift-2pix_axis.csv'))
 
         # if input is a dataframe
         if isinstance(spectra_to_match,pd.DataFrame):
@@ -813,8 +834,8 @@ class Plot():
         
         # save plot
         plt.tight_layout()
-        plt.savefig(f'{path}\\{var}_{method}_coefs_plot.jpg', dpi=600)
-        plt.savefig(f'{path}\\{var}_{method}_coefs_plot.eps', dpi=600)
+        plt.savefig(os.path.join(path, f'{var}_{method}_coefs_plot.jpg'), dpi=600)
+        plt.savefig(os.path.join(path, f'{var}_{method}_coefs_plot.eps'), dpi=600)
         plt.close()
         
     # predicted vs true scatter plot with 1:1 line
@@ -828,26 +849,22 @@ class Plot():
         color = 'black' #'#3f997c' # dot color
         opacity = 0.6 # dot opacity
 
-        # get plot limits for 1:1
-        plt_max = get_max(max(max(df[actual_col].values), max(df[pred_col].values)))       
-        plt_min = get_min(min(min(df[actual_col].values), min(df[pred_col].values)))
-
-            
-        # get X limits
-        x_min = get_min(min(df[actual_col].values))
-        x_max = get_max(max(df[actual_col].values))
-        
-        # get \y limits
-        y_min = get_min(min(df[pred_col].values))
-        y_max = get_max(max(df[pred_col].values))
+        # get plot limits for 1:1 line
+        plot_dict = get_limits_for_1_to_1_line(df, actual_col, pred_col)
 
         # make plot
         fig, ax = plt.subplots(figsize=(6,6))
         ax.scatter(df[actual_col], df[pred_col], c=color, alpha=opacity)
-        ax.plot([plt_min,plt_max], [plt_min,plt_max], 'k--')
-        ax.plot([plt_min,plt_max], [0,0], 'k')
-        plt.xlim(x_min,x_max)
-        plt.ylim(y_min, y_max)
+        ax.plot(
+            [plot_dict['plt_min'],plot_dict['plt_max']], 
+            [plot_dict['plt_min'],plot_dict['plt_max']],
+            'k--')
+        ax.plot(
+            [plot_dict['plt_min'],plot_dict['plt_max']], 
+            [0,0], 
+            'k')
+        plt.xlim(plot_dict['x_min'],plot_dict['x_max'])
+        plt.ylim(plot_dict['y_min'], plot_dict['y_max'])
 
         plt.title(f'{type} RMSE: {round(rmse, 2)}    Adj. R2: {round(adj_r2, 2)}', fontsize=size)
         ax.set_ylabel(f'Predicted {var}', fontsize=size)
@@ -855,6 +872,6 @@ class Plot():
 
         # save plot
         plt.tight_layout()
-        plt.savefig(f'{path}\\{var}_{method}_{type}_pred_true_plot.jpg', dpi=600)
-        plt.savefig(f'{path}\\{var}_{method}_{type}_pred_true_plot.eps', dpi=600)
+        plt.savefig(os.path.join(path, f'{var}_{method}_{type}_pred_true_plot.jpg'), dpi=600)
+        plt.savefig(os.path.join(path, f'{var}_{method}_{type}_pred_true_plot.eps'), dpi=600)
         plt.close()

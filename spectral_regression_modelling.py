@@ -103,7 +103,7 @@ parser.add_argument('-f', '--datafolder', type=str, default=None, help='Path of 
 parser.add_argument('-o', '--outpath', type=str, default=None, help='Path of folder to output results')
 parser.add_argument('-s', '--spectra_name', type=str, default=None, help='Spectra filename')
 parser.add_argument('-m', '--meta_name', type=str, default=None, help='Metadata filename')
-parser.add_argument('-std', '--standard', action='store_true', help='Follow a standard procedure for each variable (leave blank if custom)')
+parser.add_argument('-std', '--standard', action='store_true', help='Follow a standard procedure for each variable (bool)')
 parser.add_argument('-dt', '--do_test', action='store_true', help='Holds a fold out as test data')
 parser.add_argument('-mt', '--method', type=str, default=None, help=f'Number corresponding to method selection from: {method_prompt}')
 parser.add_argument('-tf', '--test_fold', type=int, default=None, help='Integer of fold to be used for testing')

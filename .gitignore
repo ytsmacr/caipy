@@ -5,3 +5,6 @@
 .ipynb_checkpoints/iterative_outlier_detection-checkpoint.py
 .ipynb_checkpoints/spectral_regression_modelling-checkpoint.py
 __pycache__/model_tools.cpython-38.pyc
+.ipynb_checkpoints/apply_model-checkpoint.py
+.ipynb_checkpoints/model_tools-checkpoint.py
+__pycache__/model_tools.cpython-38.pyc
