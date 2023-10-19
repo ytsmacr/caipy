@@ -1,2 +1,5 @@
 
 .ipynb_checkpoints/iterative_outlier_detection-checkpoint.py
+auto/.nonadmin
+auto/conda-meta/history
+__pycache__/model_tools.cpython-38.pyc
