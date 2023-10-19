@@ -5,12 +5,13 @@ import os
 from sklearn.metrics import mean_squared_error, r2_score
 from math import sqrt
 import re
+import argparse
 
 from model_tools import check_csv, check_asc, make_bool, convert_spectra, Plot
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 24 October 2022
+Last updated 11 October 2023
 
 Apply .asc sklearn model to input data. Returns .csv of predicted values.
 Optionally include metadata file for test samples to generate:
@@ -23,11 +24,44 @@ Spectra file column format:
 Metadata file format:
 'pkey' (sample names), {variable} (values to be predicted), optionally 'Sample Name' or 'Sample_Name'
 '''
+#-------------------------------------------------------------#
+#                     DEFINED VARIABLES                       #
+#-------------------------------------------------------------#
+
+# PROMPTS
+model_prompt = 'Model file path: (e.g. C:\Documents\SiO2_model.asc) '
+spectra_prompt = 'Test spectra file path: (e.g. C:\Documents\spectra.csv) '
+has_comps_prompt = 'Test metadata file path: (e.g. C:\Documents\metadata.csv) '
+comps_prompt = 'Do you have compositions for these samples (y/n): '
+out_prompt = 'File path to export results: '
+
+#-------------------#
+# INPUT INFORMATION #
+#-------------------#
+
+# from arguments
+parser = argparse.ArgumentParser()
+parser.add_argument('-m', '--model_file', type=str, default=None, help='Path of model file')
+parser.add_argument('-sf', '--spectra_file', type=str, default=None, help='Path of spectra file')
+parser.add_argument('-hc', '--have_comps', action='store_true', help='The test data have compositions (bool)')
+parser.add_argument('-nc', '--no_comps', action='store_true', help='The test data do NOT have compositions (bool)')
+parser.add_argument('-mf', '--meta_file', type=str, default=None, help='Path of metadata file')
+parser.add_argument('-o', '--outpath', type=str, default=None, help='Path to export results')
+
+args=parser.parse_args()
+model_file = args.model_file.replace("'","")
+spectra_file = args.spectra_file.replace("'","")
+outpath = args.outpath.replace("'","")
+meta_file = args.meta_file
+if meta_file is not None:
+    meta_file = meta_file.replace("'","")
+have_comps = args.have_comps
+no_comps = args.no_comps
 
 # GET FILE INFORMATION
 # model
-model_prompt = 'Model file path: (e.g. C:\Documents\SiO2_model.asc) '
-model_file = check_asc(input(model_prompt))
+if model_file is None:
+    model_file = check_asc(input(model_prompt))
 while not os.path.exists(model_file):
     print(f'Error: path {model_file} does not exist')
     model_file = check_asc(input(model_prompt))
@@ -35,32 +69,32 @@ while not os.path.exists(model_file):
 print('\n***REMINDER***\nTest data should be processed identically to how training data were processed\n')
 
 # spectra
-spectra_prompt = 'Test spectra file path: (e.g. C:\Documents\spectra.csv) '
-spectra_file = check_csv(input(spectra_prompt))
+if spectra_file is None:
+    spectra_file = check_csv(input(spectra_prompt))
 while not os.path.exists(spectra_file):
     print(f'Error: path {spectra_file} does not exist')
     spectra_file = check_csv(input(spectra_prompt))
 
 # have compositions for test samples?
-comps_prompt = 'Do you have compositions for these samples (y/n): '
-have_comps = make_bool(input(comps_prompt).lower())
-while have_comps == 'error':
+if (have_comps is None) and (no_comps is None):
+    have_comps = make_bool(input(comps_prompt).lower())
+    while have_comps == 'error':
         print('Error: Input needs to be either y or n')
         have_comps = make_bool(input(comps_prompt).lower())
 # if so, get comps
-if have_comps:
-    comps_prompt = 'Test metadata file path: (e.g. C:\Documents\metadata.csv) '
-    meta_file = check_csv(input(comps_prompt))
-    while not os.path.exists(meta_file):
-        print(f'Error: path {meta_file} does not exist')
-        meta_file = check_csv(input(comps_prompt))
+if have_comps is True:
+    if meta_file is None:
+        meta_file = check_csv(input(has_comps_prompt))
+        while not os.path.exists(meta_file):
+            print(f'Error: path {meta_file} does not exist')
+            meta_file = check_csv(input(comps_prompt))
         
 # folder to export results to
-out_prompt = 'File path to export results: '
-outpath = input(out_prompt)
-while not os.path.exists(outpath):
-    print(f'Error: path {outpath} does not exist\n')
+if outpath is None:
     outpath = input(out_prompt)
+# make it if it doesn't exist
+if not os.path.exists(outpath):
+    os.mkdir(outpath)
     
 # load files
 model = pickle.load(open(model_file, 'rb'))
@@ -140,5 +174,6 @@ else:
                    rmse = rmsep,
                    adj_r2 = adj_r2,
                    path = outpath)
-    pred_true.to_csv(f'{outpath}\\{var}_{method}_pred_true.csv', index=False)
+    pred_true.to_csv(os.path.join(outpath, f'{var}_{method}_pred_true.csv'), index=False)
     print('Exported predicted vs. true values and plot')
+    

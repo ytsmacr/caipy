@@ -14,7 +14,7 @@ import time
 This module finds outliers by their poor predictions
 
 by Cai Ytsma
-last updated 14 September 2023
+last updated 19 October 2023
 
 TO DO: 
 [] Adjust threshold type to accept a list of multiple (like ML methods for automodelling)
@@ -78,48 +78,19 @@ data_folder = args.datafolder.replace("'","")
 outfolder = args.outfolder.replace("'","")
 spectra_path = args.spectra_name.replace("'","")
 meta_path = args.meta_name.replace("'","")
-variable = args.variable
+variable = args.variable.replace("'","")
 ml_method = args.ml_method
 outlier_method = args.outlier_method
 threshold_type = args.threshold_type
 threshold_value = args.threshold_value
 
-### READ IN DATA ###
-if data_folder is None:
-    data_folder, all_files = get_data_folder()
-else:
-    all_files = os.listdir(data_folder)
-
-if spectra_path is None:
-    spectra_path = get_spectra_path(data_folder, all_files)
-    spectra = pd.read_csv(spectra_path)
-else:
-    spectra = pd.read_csv(os.path.abspath(os.path.join(data_folder, spectra_path)))
-    
-if meta_path is None:
-    meta_path = get_meta_path(data_folder, all_files)
-    meta = pd.read_csv(meta_path)
-else:
-    meta = pd.read_csv(os.path.abspath(os.path.join(data_folder, meta_path)))
-
-# check data formats
-if spectra.columns[0] != 'wave':
-    raise ValueError('First column of spectra file should be "wave": the x-axis values')
-if meta.columns[0] != 'pkey':
-    raise ValueError('First column of metadata file should be "pkey": the individual identifier of each spectrum')
-    
-# sort to make sure the same
-if any(spectra.columns[1:] != list(meta.pkey)):
-    print('Sorting to match')
-    vals = list(meta.pkey)
-    vals.sort()
-    meta.sort_values('pkey', ignore_index=True, inplace=True)
-    vals.insert(0,'wave')
-    spectra = spectra[vals]
-
 ### ASSIGN VARIABLES ###
 if outfolder is None:
     outfolder = get_out_folder()
+# make folder if it doesn't already exist
+if not os.path.exists(outfolder):
+    os.mkdir(outfolder)    
+
 if variable is None:
     variable = input(var_prompt)
     while variable not in meta.columns:
@@ -169,6 +140,36 @@ elif (threshold_value != 'default')&(threshold_type != 'max_iter'):
 # where no values provided
 else:
     threshold_value = float(input(tv_prompt))
+
+### READ IN DATA ###
+if data_folder is None:
+    data_folder, all_files = get_data_folder()
+else:
+    all_files = os.listdir(data_folder)
+
+if spectra_path is None:
+    spectra_path = get_spectra_path(data_folder, all_files)
+    spectra = pd.read_csv(spectra_path)
+else:
+    spectra = pd.read_csv(os.path.abspath(os.path.join(data_folder, spectra_path)))
+    
+if meta_path is None:
+    meta_path = get_meta_path(data_folder, all_files)
+    meta = pd.read_csv(meta_path)
+else:
+    meta = pd.read_csv(os.path.abspath(os.path.join(data_folder, meta_path)))
+
+# check data formats
+if spectra.columns[0] != 'wave':
+    raise ValueError('First column of spectra file should be "wave": the x-axis values')
+if meta.columns[0] != 'pkey':
+    raise ValueError('First column of metadata file should be "pkey": the individual identifier of each spectrum')
+
+# filter metadata & spectra for those with variable info
+meta = meta[~meta[variable].isna()].sort_values('pkey', ignore_index=True)
+vals = list(meta.pkey)
+vals.insert(0,'wave')
+spectra = spectra[vals]    
 
 ''' 
 FUNCTIONS
@@ -308,9 +309,6 @@ def identify_outlier(df, train_col, test_col):
 '''
 RUN PROCEDURE
 '''
-print(f'Performing iterative outlier removal {outlier_method} for variable {variable} with a {threshold_type} stopping threshold of {threshold_value}, using a {ml_method} regression')
-start_time = time.time()
-
 # universal variables
 train_col = 'avg_train_RMSE'
 fold_col = 'Outlier_Folds'
@@ -357,6 +355,9 @@ sample_dict = dict(zip(meta[fold_col], meta[id_col]))
 # sample to variable value key
 var_dict = dict(zip(meta[id_col], meta[variable]))
 
+print(f'Performing iterative outlier removal {outlier_method} for variable {variable} with a {threshold_type} stopping threshold of {threshold_value}, using a {ml_method} regression')
+start_time = time.time()
+
 ### BEGIN ###
 while to_continue is True:
     # prep data formatting
@@ -373,9 +374,7 @@ while to_continue is True:
     print(f'Finding outlier #{count}')
     result_data = []
     for test_fold in tqdm(list(meta[fold_col].unique()), desc='Sample', leave=False):
-        print(test_fold)
         sample = sample_dict[test_fold]
-        print(sample)
         # make model
         if outlier_method == 'per_sample':
             rmsecv, rmsec, r2_train, rmsep = get_model_results(ml_method, 

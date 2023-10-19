@@ -120,7 +120,9 @@ spectra_path = args.spectra_name.replace("'","")
 meta_path = args.meta_name.replace("'","")
 standard = args.standard
 do_test = args.do_test
-method_type = args.method.replace("'","")
+method_type = args.method
+if method_type is not None:
+    method_type = method_type.replace("'","")
 test_fold = args.test_fold
 hide_progress = args.hide_progress
 max_components_ = args.max_components
