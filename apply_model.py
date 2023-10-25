@@ -11,7 +11,7 @@ from model_tools import check_csv, check_asc, make_bool, convert_spectra, Plot
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 11 October 2023
+Last updated 25 October 2023
 
 Apply .asc sklearn model to input data. Returns .csv of predicted values.
 Optionally include metadata file for test samples to generate:
@@ -49,9 +49,15 @@ parser.add_argument('-mf', '--meta_file', type=str, default=None, help='Path of 
 parser.add_argument('-o', '--outpath', type=str, default=None, help='Path to export results')
 
 args=parser.parse_args()
-model_file = args.model_file.replace("'","")
-spectra_file = args.spectra_file.replace("'","")
-outpath = args.outpath.replace("'","")
+model_file = args.model_file
+if model_file is not None:
+    model_file = model_file.replace("'","")
+spectra_file = args.spectra_file
+if spectra_file is not None:
+    spectra_file = spectra_file.replace("'","")
+outpath = args.outpath
+if outpath is not None:
+    outpath = outpath.replace("'","")
 meta_file = args.meta_file
 if meta_file is not None:
     meta_file = meta_file.replace("'","")
