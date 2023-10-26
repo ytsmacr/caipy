@@ -14,7 +14,7 @@ from model_tools import *
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 15 September 2023
+Last updated 26 October 2023
 
 Train spectral calibration standards with PLS and/or LASSO modelling. 
 Optionally use one fold of standards as test set.
@@ -103,7 +103,7 @@ parser.add_argument('-f', '--datafolder', type=str, default=None, help='Path of 
 parser.add_argument('-o', '--outpath', type=str, default=None, help='Path of folder to output results')
 parser.add_argument('-s', '--spectra_name', type=str, default=None, help='Spectra filename')
 parser.add_argument('-m', '--meta_name', type=str, default=None, help='Metadata filename')
-parser.add_argument('-std', '--standard', action='store_true', help='Follow a standard procedure for each variable (leave blank if custom)')
+parser.add_argument('-std', '--standard', action='store_true', help='Follow a standard procedure for each variable (bool)')
 parser.add_argument('-dt', '--do_test', action='store_true', help='Holds a fold out as test data')
 parser.add_argument('-mt', '--method', type=str, default=None, help=f'Number corresponding to method selection from: {method_prompt}')
 parser.add_argument('-tf', '--test_fold', type=int, default=None, help='Integer of fold to be used for testing')
@@ -148,13 +148,13 @@ if spectra_path is None:
     spectra_path = get_spectra_path(data_folder, all_files)
     spectra = pd.read_csv(spectra_path)
 else:
-    spectra = pd.read_csv(f'{data_folder}\\{spectra_path}')
+    spectra = pd.read_csv(os.path.join(data_folder, spectra_path))
     
 if meta_path is None:
     meta_path = get_meta_path(data_folder, all_files)
     meta = pd.read_csv(meta_path)
 else:
-    meta = pd.read_csv(f'{data_folder}\\{meta_path}')
+    meta = pd.read_csv(os.path.join(data_folder, meta_path))
 
 # show the progress bars and results of CV
 if hide_progress is None:
@@ -377,7 +377,7 @@ for var in var_to_run:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             model.fit(X_train, y_train)
-        pickle.dump(model, open(f'{outpath}\\{var}_{method}_model.asc', 'wb'), protocol=0)
+        pickle.dump(model, open(os.path.join(outpath, f'{var}_{method}_model.asc'), 'wb'), protocol=0)
 
         # MODEL PARAMETERS
         if method in non_linear_methods:
@@ -400,7 +400,7 @@ for var in var_to_run:
             if not pd.api.types.is_numeric_dtype(coef['coef']):
                 coef['coef'] = [x[0] for x in coef.coef]
 
-            coef.to_csv(f'{outpath}\\{var}_{method}_coefs.csv', index=False)
+            coef.to_csv(os.path.join(outpath, f'{var}_{method}_coefs.csv'), index=False)
 
             # plot
             Plot.coeffs(df = coef,
@@ -419,7 +419,7 @@ for var in var_to_run:
             actual_col : y_train.flatten().tolist(),
             pred_col : train_preds.flatten().tolist()
         })
-        train_pred_true.to_csv(f'{outpath}\\{var}_{method}_train_pred_true.csv', index=False)
+        train_pred_true.to_csv(os.path.join(outpath, f'{var}_{method}_train_pred_true.csv'), index=False)
 
         rmsec = sqrt(mean_squared_error(train_pred_true[actual_col], train_pred_true[pred_col]))
         r2_train = model.score(X_train,y_train)
@@ -508,7 +508,7 @@ if (set(test_fold_list) == {'NA'}) and (set(n_test_list) == {'NA'}) and(set(rmse
         'adj-R2 train':adj_r2_train_list
     })
     
-    results.to_csv(f'{outpath}\\modelling_train_results.csv', index=False)
+    results.to_csv(os.path.join(outpath,'modelling_train_results.csv'), index=False)
 
 # if had training and testing    
 else:
@@ -529,7 +529,7 @@ else:
         'adj-R2 test':adj_r2_test_list
     })
 
-    results.to_csv(f'{outpath}\\modelling_train_test_results.csv', index=False)
+    results.to_csv(os.path.join(outpath,'modelling_train_test_results.csv'), index=False)
 
 if len(var_to_run) > 1:
     main_end = time.time()
