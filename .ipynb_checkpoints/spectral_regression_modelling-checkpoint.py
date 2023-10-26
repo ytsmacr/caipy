@@ -457,7 +457,7 @@ for var in var_to_run:
                 actual_col : y_test.flatten().tolist(),
                 pred_col : test_preds.flatten().tolist()
             })
-            test_pred_true.to_csv(f'{outpath}\\{var}_{method}_test_pred_true.csv', index=False)
+            test_pred_true.to_csv(os.path.join(outpath,f'{var}_{method}_test_pred_true.csv'), index=False)
 
             rmsep = sqrt(mean_squared_error(test_pred_true[actual_col], test_pred_true[pred_col]))
             r2_test = model.score(X_test,y_test)
