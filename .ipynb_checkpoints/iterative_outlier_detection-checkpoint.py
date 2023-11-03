@@ -4,11 +4,16 @@ import numpy as np
 from model_tools import *
 from math import sqrt
 from sklearn.metrics import mean_squared_error
-from tqdm.notebook import tqdm
+from tqdm import tqdm
 from matplotlib import pyplot as plt
 from scipy.stats import iqr
 import argparse
 import time
+
+# ignore convergence warning
+from warnings import simplefilter
+from sklearn.exceptions import ConvergenceWarning
+simplefilter("ignore", category=ConvergenceWarning)
 
 '''
 This module finds outliers by their poor predictions
@@ -74,11 +79,21 @@ parser.add_argument('-tv', '--threshold_value', default='default', help=tv_promp
 
 ### PULL VALUES ###
 args=parser.parse_args()
-data_folder = args.datafolder.replace("'","")
-outfolder = args.outfolder.replace("'","")
-spectra_path = args.spectra_name.replace("'","")
-meta_path = args.meta_name.replace("'","")
-variable = args.variable.replace("'","")
+data_folder = args.datafolder
+if data_folder is not None: 
+    data_folder = data_folder.replace("'","")
+outfolder = args.outfolder
+if outfolder is not None: 
+    outfolder = outfolder.replace("'","")
+spectra_path = args.spectra_name
+if spectra_path is not None: 
+    spectra_path = spectra_path.replace("'","")
+meta_path = args.meta_name
+if meta_path is not None: 
+    meta_path = meta_path.replace("'","")
+variable = args.variable
+if variable is not None: 
+    variable = variable.replace("'","")
 ml_method = args.ml_method
 outlier_method = args.outlier_method
 threshold_type = args.threshold_type
@@ -119,28 +134,6 @@ if threshold_type is None:
         print(f"Error: Threshold type {threshold_type} not in {', '.join(tt_options)}")
         threshold_type = input(tt_prompt)
 
-# default for max_iter
-def get_max_iter(method):
-    if outlier_method == 'per_spectrum':
-        print('Using default max_iter of N spectra - 2')
-        return meta.pkey.nunique() - 2
-    elif outlier_method == 'per_sample':
-        print('Using default max_iter of N samples - 2')
-        return meta.Sample_Name.nunique() - 2
-
-# where using complete defaults, or specified max_iter with no threshold value
-if (threshold_value == 'default')&(threshold_type == 'max_iter'):
-    threshold_value = get_max_iter(outlier_method)
-# where using max_iter, and provided threshold value
-elif (threshold_value != 'default')&(threshold_type == 'max_iter'):
-    threshold_value = int(threshold_value)
-# where not using max_iter, and provided a value
-elif (threshold_value != 'default')&(threshold_type != 'max_iter'):
-    threshold_value = float(threshold_value)
-# where no values provided
-else:
-    threshold_value = float(input(tv_prompt))
-
 ### READ IN DATA ###
 if data_folder is None:
     data_folder, all_files = get_data_folder()
@@ -174,6 +167,16 @@ spectra = spectra[vals]
 ''' 
 FUNCTIONS
 '''
+# default for max_iter
+def get_max_iter(method):
+    global meta
+    if outlier_method == 'per_spectrum':
+        print('Using default max_iter of N spectra - 2')
+        return meta.pkey.nunique() - 2
+    elif outlier_method == 'per_sample':
+        print('Using default max_iter of N samples - 2')
+        return meta.Sample_Name.nunique() - 2
+
 def get_model_results(method, formatted_data, variable, fold_col, test_fold=None, by_spectrum=False):
     '''
     Gets outcome of model for that current iteration
@@ -309,6 +312,19 @@ def identify_outlier(df, train_col, test_col):
 '''
 RUN PROCEDURE
 '''
+# where using complete defaults, or specified max_iter with no threshold value
+if (threshold_value == 'default')&(threshold_type == 'max_iter'):
+    threshold_value = get_max_iter(outlier_method)
+# where using max_iter, and provided threshold value
+elif (threshold_value != 'default')&(threshold_type == 'max_iter'):
+    threshold_value = int(threshold_value)
+# where not using max_iter, and provided a value
+elif (threshold_value != 'default')&(threshold_type != 'max_iter'):
+    threshold_value = float(threshold_value)
+# where no values provided
+else:
+    threshold_value = float(input(tv_prompt))
+
 # universal variables
 train_col = 'avg_train_RMSE'
 fold_col = 'Outlier_Folds'

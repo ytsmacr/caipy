@@ -114,10 +114,18 @@ parser.add_argument('-pd', '--poly_deg', type=int, default=None, help='Sets the 
 parser.add_argument('-mn', '--max_neighbors', type=int, default=None, help='Sets the maximum number of neighbors for kNN')
 
 args=parser.parse_args()
-data_folder = args.datafolder.replace("'","")
-outpath = args.outpath.replace("'","")
-spectra_path = args.spectra_name.replace("'","")
-meta_path = args.meta_name.replace("'","")
+data_folder = args.datafolder
+if data_folder is not None:
+    data_folder = data_folder.replace("'","")
+outpath = args.outpath
+if outpath is not None:
+    outpath = outpath.replace("'","")
+spectra_path = args.spectra_name
+if spectra_path is not None:
+    spectra_path = spectra_path.replace("'","")
+meta_path = args.meta_name
+if meta_path is not None:
+    meta_path = meta_path.replace("'","")
 standard = args.standard
 do_test = args.do_test
 method_type = args.method
