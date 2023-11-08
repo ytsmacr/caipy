@@ -7,6 +7,7 @@ from statistics import mean
 from tqdm import tqdm
 import os
 import matplotlib.pyplot as plt 
+import matplotlib.cm as cm
 plt.set_loglevel('error')
 
 # preprocessing
@@ -25,9 +26,9 @@ from sklearn.pipeline import Pipeline
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 11 October 2023
+Last updated 8 November 2023
 
-Helper functions and classes used by other programs in auto-modelling.
+Helper functions and classes used by other programs in caipy.
 '''
 
 ########################
@@ -168,7 +169,7 @@ def get_out_folder():
         print(f'Error: path {outpath} does not exist\n')
         outpath = input(out_prompt)
     return outpath
-    
+
 ##########################################
 
 class Preprocess():
@@ -425,6 +426,98 @@ class Format():
             raise ValueError(f"Must either have an assigned '{var}_Folds' or general 'Folds' column")
 
         return fold_col
+    
+    # identify the fold that is most like the full dataset
+    def get_most_representative_fold(self, variable=None, do_plot=False):
+
+        if variable is None:
+            # identify variable cols
+            var_cols = [x.replace('_Folds','') for x in self.meta.columns if '_Folds' in x]
+        else:
+            # manual inputs can either be list (many) or string (one)
+            if type(variable) == str:
+                var_cols = [variable]
+            elif type(variable) == list:
+                var_cols = variable
+            else:
+                raise ValueError('Variable input must either be a string or list')
+        
+        # if multiple
+        if len(var_cols)>1:
+            print(f'Returning best fold column for all {len(var_cols)} identified variables')
+        elif len(var_cols) == 0:
+            raise ValueError('No fold columns identified. Have you stratified your metadata?')
+    
+        best_fold_dict = dict()
+        for var in var_cols:
+            assert var in self.meta.columns
+            # get the folds
+            all_folds = list(self.meta[f'{var}_Folds'].unique())
+            # ignore the samples that aren't to be modelled
+            if -1 in all_folds:
+                all_folds.remove(-1)
+            all_folds.sort()
+            
+            # get the histogram of all data, to match
+            # choosing optimal number of bins by the Freedman-Diaconis rule
+            hist_all, bin_edges = np.histogram(
+                self.meta[
+                    (~self.meta[var].isna()) & # has a value
+                    (self.meta[f'{var}_Folds']!=-1) # isn't an outlier
+                ][var].values, 
+                bins='fd'
+            )
+            hist_all_per = hist_all/sum(hist_all)
+        
+            if do_plot:
+                # make colormap key evenly split
+                cm_key = np.linspace(0,1,len(all_folds))
+                # plot main data       
+                fig,ax = plt.subplots(
+                    nrows=len(all_folds)+1,
+                    figsize=(6,14)
+                )
+                ax[0].bar(bin_edges[:-1], hist_all_per, width=np.diff(bin_edges), color='black')
+                ax[0].set_title(f'Original {var} data')
+        
+            # get difference in histograms for each fold
+            fold_diff_dict = dict()
+            for i, fold in enumerate(all_folds):
+                # get histogram using the same bins are for all the data
+                fold_hist = np.histogram(
+                    self.meta[self.meta[f'{var}_Folds']==fold][var].values, 
+                    bins=bin_edges)[0]        
+                # convert to percentages per bin
+                fold_hist_per = fold_hist/sum(fold_hist)
+                
+                # calculate the mean abs difference to the full hist
+                # https://stackoverflow.com/questions/50430585/mean-absolute-difference-of-two-numpy-arrays
+                fold_diff = np.mean(np.abs(fold_hist_per[:,None] - hist_all_per))
+                # add to dict
+                fold_diff_dict[fold] = fold_diff
+                
+                # plot
+                if do_plot:
+                    ax[i+1].bar(bin_edges[:-1], 
+                                fold_hist_per, 
+                                width=np.diff(bin_edges),
+                               color=cm.viridis(cm_key[i]))
+                    ax[i+1].set_title(f'{var} Fold {fold}: {round(fold_diff*100,5)}% difference')
+            if do_plot:
+                # display plot
+                plt.tight_layout()
+                plt.show()
+        
+            # choose best fold
+            best_fold = min(fold_diff_dict, key=fold_diff_dict.get)
+            best_fold_dict[var] = best_fold
+    
+        # if only one variable, just return it
+        if len(var_cols) == 1:
+            return best_fold
+        # otherwise, return dict
+        else:
+            return best_fold_dict
 
     # convert data to dict of train/test dfs per fold
     def make_data_dict(self, var, fold_col, test_fold=None):

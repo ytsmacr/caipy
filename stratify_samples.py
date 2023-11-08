@@ -42,10 +42,10 @@ n_folds = args.n_folds
 
 # input information
 if meta_file is None:
-    meta_file = check_csv(input('Path location and file name: (e.g. C:\Documents\meta_file.csv) '))
+    meta_file = check_csv(input('Path location and file name: (e.g. C:/Documents/meta_file.csv) '))
     while not os.path.exists(meta_file):
         print(f'Error: path {meta_file} does not exist')
-        meta_file = check_csv(input('Path location and file name: (e.g. C:\Documents\meta_file.csv) '))
+        meta_file = check_csv(input('Path location and file name: (e.g. C:/Documents/meta_file.csv) '))
 
 if n_folds is None:
     fold_input = input('How many folds do you want? (Press ENTER for default of 5, or 0 for leave-one-out (k=N) ')

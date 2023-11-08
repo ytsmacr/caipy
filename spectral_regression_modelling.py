@@ -14,9 +14,9 @@ from model_tools import *
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 26 October 2023
+Last updated 8 November 2023
 
-Train spectral calibration standards with PLS and/or LASSO modelling. 
+Train spectral calibration standards with variouse regression methods. 
 Optionally use one fold of standards as test set.
 
 Spectra file column format:
@@ -103,11 +103,11 @@ parser.add_argument('-f', '--datafolder', type=str, default=None, help='Path of 
 parser.add_argument('-o', '--outpath', type=str, default=None, help='Path of folder to output results')
 parser.add_argument('-s', '--spectra_name', type=str, default=None, help='Spectra filename')
 parser.add_argument('-m', '--meta_name', type=str, default=None, help='Metadata filename')
-parser.add_argument('-std', '--standard', action='store_true', help='Follow a standard procedure for each variable (bool)')
-parser.add_argument('-dt', '--do_test', action='store_true', help='Holds a fold out as test data')
+parser.add_argument('-std', '--standard', type=bool, default=None, help='Follow a standard procedure for each variable (bool)')
+parser.add_argument('-dt', '--do_test', type=bool, default=None, help='Hold a fold out as test data (bool)')
 parser.add_argument('-mt', '--method', type=str, default=None, help=f'Number corresponding to method selection from: {method_prompt}')
 parser.add_argument('-tf', '--test_fold', type=int, default=None, help='Integer of fold to be used for testing')
-parser.add_argument('-hp', '--hide_progress', action='store_true', help='Hides progress bars')
+parser.add_argument('-hp', '--hide_progress', type=bool, default=None, help='Hides progress bars')
 parser.add_argument('-mc', '--max_components', type=int, default=None, help='Sets the maximum PLS components')
 parser.add_argument('-np', '--num_params', type=int, default=None, help='Sets the number of values to test for LASSO, Ridge, ElasticNet, SVR')
 parser.add_argument('-pd', '--poly_deg', type=int, default=None, help='Sets the polynomial degree for SVR and kernel PCR')
@@ -198,12 +198,13 @@ print('Identified variable(s) to model:', all_var)
 
 # check if run same procedure for all var
 if standard is None:
-    standard = False
     if len(var_to_run) > 1:
         standard = make_bool(input(std_prompt).lower())
         while standard == 'error':
             print('Error: Input needs to be either y or n')
             standard = make_bool(input(std_prompt).lower())
+    else:
+        standard = False
 
 # if so, get parameters
 if standard:
