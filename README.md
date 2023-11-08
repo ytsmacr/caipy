@@ -7,13 +7,13 @@ If you don't have Anaconda already, you can [download it for free](anaconda.com)
 
 From Anaconda Prompt command line:
 ### Initial setup
-1. Create new conda environment (you can call it something other than 'auto'): `conda create -n auto`
-2. Activate the environment:	`conda activate auto`
+1. Create new conda environment (you can call it something other than 'caipy'): `conda create -n caipy`
+2. Activate the environment:	`conda activate caipy`
 3. Navigate to path containing files: `cd your_path_here`
 4. Install required packages: `pip install -r requirements.txt`
 
 ### To run files
-1. Activate the environment: `conda activate auto`
+1. Activate the environment: `conda activate caipy`
 2. Navigate to path containing files: `cd your_path_here`
 3. Run files: `python file_name_here.py`
 
