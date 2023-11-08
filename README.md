@@ -1,4 +1,4 @@
-# Auto-modelling
+# Caipy: Automated regression modelling and tools for spectroscopy data
 ### by Cai Ytsma (cai@caiconsulting.co.uk)
 Programs to format, train, and test datasets for multivariate regression. Designed for spectroscopy data. All machine learning algorithms from [scikit-learn](https://scikit-learn.org/stable/index.html).
 
