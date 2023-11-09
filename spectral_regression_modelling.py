@@ -12,9 +12,11 @@ import argparse
 
 from model_tools import *
 
+# TODO: Fix variable to run to check against existence of Folds column
+
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 8 November 2023
+Last updated 9 November 2023
 
 Train spectral calibration standards with variouse regression methods. 
 Optionally use one fold of standards as test set.
@@ -244,21 +246,11 @@ if standard:
 #---------------#
 # RUN PROCEDURE #
 #---------------#            
-# prep lists for results df
-n_train_list = []
-rmsecv_list = []
-param_list = []
-rmsec_list = []
-intercept_list = []
-r2_train_list = []
-adj_r2_train_list = []
-n_test_list = []
-rmsep_list = []
-r2_test_list = []
-adj_r2_test_list = []
-test_fold_list = []
-method_list = []
-var_list = []
+
+# OPEN RESULTS FILE
+outfile = open(os.path.join(outpath,'modelling_results.csv'), 'w')
+# enter header
+outfile.writelines('variable,n_train,model_type,rmsecv,model_params, model_intercept,rmsec,r2_train,adj_r2_train,test_fold,n_test,rmsep,r2_test,adj_r2_test\n')
 
 # get elapsed time rather than tqdm
 main_start = time.time()
@@ -395,7 +387,7 @@ for var in var_to_run:
         
         else:       
             # special cases here
-            if method in ['SVR-lin']:
+            if method in ['SVR-lin','PLS']:
                 coef_list = list(model.coef_[0])
                 intercept = model.intercept_[0]               
             else:
@@ -445,17 +437,6 @@ for var in var_to_run:
 
         print(f'\tRMSE-C: {round(rmsec,3)}    R2: {round(r2_train,3)}    Adjusted R2: {round(adj_r2_train,3)}')
 
-        # add data to lists
-        var_list.append(var)
-        n_train_list.append(len(y_train))
-        method_list.append(method)
-        rmsecv_list.append(rmsecv)
-        intercept_list.append(intercept)
-        param_list.append(param)
-        rmsec_list.append(rmsec)
-        r2_train_list.append(r2_train)
-        adj_r2_train_list.append(adj_r2_train)
-
         # optional testing
         if do_test:
             print(f'\nTesting model')
@@ -483,63 +464,18 @@ for var in var_to_run:
             
             print(f'\tRMSE-P: {round(rmsep,3)}    R2: {round(r2_test,3)}    Adjusted R2: {round(adj_r2_test,3)}')
 
-            test_fold_list.append(test_fold)
-            n_test_list.append(len(y_test))
-            rmsep_list.append(rmsep)
-            r2_test_list.append(r2_test)
-            adj_r2_test_list.append(adj_r2_test) 
+            # write results
+            outfile.writelines(f'{var},{len(y_train)},{method},{rmsecv},{param},{intercept},{rmsec},{r2_train},{adj_r2_train},{test_fold},{len(y_test)},{rmsep},{r2_test},{adj_r2_test}\n')
         else:
-            test_fold_list.append('NA')
-            n_test_list.append('NA')
-            rmsep_list.append('NA')
-            r2_test_list.append('NA')
-            adj_r2_test_list.append('NA')  
+            # write results
+            outfile.writelines(f'{var},{len(y_train)},{method},{rmsecv},{param},{intercept},{rmsec},{r2_train},{adj_r2_train},,,,,\n')
             
     # report elapsed time for variable
     sub_end = time.time()
     print(f'\n{var} took {round(sub_end-sub_start,1)} seconds to run')
-    
-#----------------#
-# EXPORT RESULTS #
-#----------------#
-
-# if only had training
-if (set(test_fold_list) == {'NA'}) and (set(n_test_list) == {'NA'}) and(set(rmsep_list) == {'NA'}) and(set(r2_test_list) == {'NA'}) and(set(adj_r2_test_list) == {'NA'}):
-    results = pd.DataFrame({
-        'variable':var_list,
-        '# train':n_train_list,
-        'model type':method_list,
-        'RMSE-CV':rmsecv_list,
-        'model parameter':param_list,
-        'model intercept':intercept_list,
-        'RMSE-C':rmsec_list,
-        'R2 train':r2_train_list,
-        'adj-R2 train':adj_r2_train_list
-    })
-    
-    results.to_csv(os.path.join(outpath,'modelling_train_results.csv'), index=False)
-
-# if had training and testing    
-else:
-    results = pd.DataFrame({
-        'variable':var_list,
-        '# train':n_train_list,
-        'model type':method_list,
-        'RMSE-CV':rmsecv_list,
-        'model parameter':param_list,
-        'model intercept':intercept_list,
-        'RMSE-C':rmsec_list,
-        'R2 train':r2_train_list,
-        'adj-R2 train':adj_r2_train_list,
-        'test fold':test_fold_list,
-        '# test':n_test_list,
-        'RMSE-P':rmsep_list,
-        'R2 test':r2_test_list,
-        'adj-R2 test':adj_r2_test_list
-    })
-
-    results.to_csv(os.path.join(outpath,'modelling_train_test_results.csv'), index=False)
 
 if len(var_to_run) > 1:
     main_end = time.time()
     print(f'\nAll variables took {round((main_end-main_start)/60,1)} minutes to run')
+
+outfile.close()
