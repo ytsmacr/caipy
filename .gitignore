@@ -20,3 +20,7 @@ __pycache__/model_tools.cpython-312.pyc
 tools/__pycache__/airPLS.cpython-312.pyc
 tools/__pycache__/spectres.cpython-312.pyc
 .ipynb_checkpoints/apply_model-checkpoint.py
+tools/__pycache__/airPLS.cpython-311.pyc
+tools/__pycache__/spectres.cpython-311.pyc
+__pycache__/model_tools.cpython-311.pyc
+.ipynb_checkpoints/apply_model-checkpoint.py

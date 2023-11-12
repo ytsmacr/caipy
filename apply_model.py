@@ -96,10 +96,12 @@ if (model_file is None) and (model_list is None):
         model_list = [model_file] # convert to list to streamline procedure
     elif single_model is False:
         model_list = input(model_list_prompt)
-        model_list = model_list.split(' ')
-        model_list = [check_model_file(x) for x in model_list] # check they all exist
 
-print('\n***REMINDER***\nTest data should be processed identically to how training data were processed\n')
+# prep files
+model_list = model_list.split(',')
+model_list = [check_model_file(x) for x in model_list] # check they all exist
+
+print('***REMINDER***\nTest data should be processed identically to how training data were processed\n')
 
 # spectra
 if spectra_file is None:
@@ -137,8 +139,14 @@ if have_comps:
 # prep output file
 pred_df = meta[['pkey']].copy()
 
+if have_comps is True:
+    # OPEN RESULTS FILE
+    outfile = open(os.path.join(outpath,'prediction_results.csv'), 'w')
+    # enter header
+    outfile.writelines('variable,model_type,n_pred,rmsep,r2_test,adj_r2_test\n')
+
 # RUN
-for model_file in model_list:
+for i, model_file in enumerate(model_list):
     model = pickle.load(open(model_file, 'rb'))
     # format data
     X_test = convert_spectra(spectra)
@@ -177,36 +185,47 @@ for model_file in model_list:
         # add actual values
         for option in ['Sample_Name', 'Sample Name']:
             if option in meta.columns:
-                cols_to_add = ['pkey', var, option]
+                if i == 0:
+                    cols_to_add = ['pkey', option, var]
+                else:
+                    cols_to_add = ['pkey', var]
         pred_df = pred_df.merge(meta[cols_to_add], how='left', on='pkey')
         pred_df.rename(columns={var:actual_col}, inplace=True)
 
         # calculate metrics on temp df
         pred_true = pred_df[[actual_col,pred_col]].copy().dropna()
-        # RMSE-P
-        rmsep = sqrt(mean_squared_error(pred_true[actual_col],
-                                        pred_true[pred_col]))
-        # R2
-        r2 = r2_score(pred_true[actual_col],
-                      pred_true[pred_col])
-        # adjusted r2
-        adj_r2 = 1 - (1-r2)*(len(pred_true) - 1) / (len(pred_true) - (pred_true.shape[1] - 1) - 1)
-        print(f'\n\t{var} RMSE-P: {round(rmsep,3)}    R2: {round(r2,3)}    Adjusted R2: {round(adj_r2,3)}\n')
-        
-        # PLOT
-        Plot.pred_df(df = pred_true,
-                       var = var, 
-                       method = method, 
-                       type = 'test',
-                       rmse = rmsep,
-                       adj_r2 = adj_r2,
-                       path = outpath)
+        if len(pred_true) > 2:
+            # RMSE-P
+            rmsep = sqrt(mean_squared_error(pred_true[actual_col],
+                                            pred_true[pred_col]))
+            # R2
+            r2 = r2_score(pred_true[actual_col],
+                          pred_true[pred_col])
+            # adjusted r2
+            adj_r2 = 1 - (1-r2)*(len(pred_true) - 1) / (len(pred_true) - (pred_true.shape[1] - 1) - 1)
+            
+            # add results
+            outfile.writelines(f'{var},{method},{len(pred_true)},{rmsep},{r2},{adj_r2}\n')
+            
+            # PLOT
+            Plot.pred_true(df = pred_true,
+                           var = var, 
+                           method = method, 
+                           type = 'test',
+                           rmse = rmsep,
+                           adj_r2 = adj_r2,
+                           path = outpath)
+        else:
+            print(f'{var} only has {len(pred_true)} sample(s) to test, so skipping RMSE and R2 calculations')
+            # add results
+            outfile.writelines(f'{var},{method},{len(pred_true)},,,\n')
 
 if have_comps:
-    pred_df.to_csv(os.path.join(outpath, f'{var}_{method}_predictions.csv'), index=False)
+    outfile.close()
+    pred_df.to_csv(os.path.join(outpath, f'predictions.csv'), index=False)
     print('Exported predicted vs. true values and plot')
 else:
-    pred_df.to_csv(os.path.join(outpath,f'{var}_{method}_predictions.csv'), index=False)
+    pred_df.to_csv(os.path.join(outpath,f'predictions.csv'), index=False)
     print('Exported predicted values')
 
     
