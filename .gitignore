@@ -16,3 +16,7 @@ __pycache__/model_tools.cpython-38.pyc
 .ipynb_checkpoints/spectral_regression_modelling-checkpoint.py
 .ipynb_checkpoints/model_tools-checkpoint.py
 .ipynb_checkpoints/Auto models workbook-checkpoint.ipynb
+__pycache__/model_tools.cpython-312.pyc
+tools/__pycache__/airPLS.cpython-312.pyc
+tools/__pycache__/spectres.cpython-312.pyc
+.ipynb_checkpoints/apply_model-checkpoint.py
