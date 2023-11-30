@@ -8,7 +8,7 @@ Code to compile model result files from
 spectral_regression_modelling.py
 
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 2 August 2023
+Last updated 30 November 2023
 '''
 
 parser = argparse.ArgumentParser()
@@ -28,29 +28,26 @@ if len(folder_list)==0:
 print(len(folder_list), 'folders found')
 
 done_any = False
+filename = 'modelling_results.csv'
+df_list = []
+for root, dirs, files in os.walk(folder):
+    for fname in files:
+        if fname != filename:
+            continue
+        fpath = os.path.join(root,fname)
+        ffolder = root.split('\\')[-1]
 
-for filename in ['modelling_train_results.csv', 'modelling_train_test_results.csv']:
-
-    df_list = []
-
-    for root, dirs, files in os.walk(folder):
-
-        for fname in files:
-            if fname != filename:
-                continue
-            fpath = os.path.join(root,fname)
-            ffolder = root.split('\\')[-1]
-
-            df = pd.read_csv(fpath)
-            df.insert(loc=0, column='folder', value=ffolder)
-            df_list.append(df)
-    if len(df_list) > 0:
-        print(f'{len(df_list)} {filename} files found')
-        merged_data = pd.concat(df_list)
-        merged_data.to_csv(f'{folder}\\cumulative_{filename}', index=False)
-        print(f'exported cumulative_{filename}')
-        done_any=True
+        df = pd.read_csv(fpath)
+        df.insert(loc=0, column='folder', value=ffolder)
+        df_list.append(df)
         
+if len(df_list) > 0:
+    print(f'{len(df_list)} {filename} files found')
+    merged_data = pd.concat(df_list)
+    merged_data.to_csv(f'{folder}\\cumulative_{filename}', index=False)
+    print(f'exported cumulative_{filename}')
+    done_any=True
+    
 if not done_any:
-    raise ValueError('No suitable files in these folders to merge. (modelling_train_results.csv, modelling_train_test_results.csv)')
+    raise ValueError('No suitable files in these folders to merge. (modelling_results.csv)')
         
