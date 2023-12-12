@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from math import sqrt
 from sklearn.metrics import mean_squared_error
-from statistics import mean
+from statistics import mean, median
 from tqdm import tqdm
 import os
 import matplotlib.pyplot as plt 
@@ -26,14 +26,17 @@ from sklearn.pipeline import Pipeline
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 8 November 2023
+Last updated 12 December 2023
 
-Helper functions and classes used by other programs in caipy.
+Standalone functions and classes used by other programs in caipy.
+
+TODO: maybe these classes should be split into different .py files, and model_tools disintegrated?
 '''
 
 ########################
 # STANDALONE FUNCTIONS #
 ########################
+# TODO: should these be added to the Analyze class? Will have to troubleshoot calls from other classes
 
 # check format of input .asc filename
 def check_asc(filename):
@@ -172,10 +175,67 @@ def get_out_folder():
 
 ##########################################
 
+class Analyze():
+
+    '''
+    Standalone functions for commonly used analyses
+    '''
+
+    def calculate_median_mean_sensitivity_plot(
+            sensitivity_list: list, # list of sensitivity values
+            descriptor: str, # name for plot
+            plot_folder: str, # file path to export plot to
+            make_plot = True,
+            show_plot = True
+            ):
+        # median
+        median_sens = round(median(sensitivity_list),9)
+        #print("Median sensitivity:", round(median_sens,1))
+
+        # mean
+        mean_sens = mean(sensitivity_list)
+        #print("Mean sensitivity:", round(mean_sens,1))
+
+        # compare median to mean
+        med_c = 'red'
+        mean_c = 'blue'
+
+        if make_plot:
+            # make plot of distributions
+            plt.hist(sensitivity_list, bins=20)
+            plt.ylabel("# Standards")
+            plt.xlabel("Sensitivity")
+            y_bot, y_top = plt.ylim()
+            plt.vlines(x=median_sens,
+                    ymin = 0,
+                    ymax = y_top,
+                    colors=med_c,
+                    label='median')
+            plt.vlines(x=mean_sens,
+                    ymin = 0,
+                    ymax = y_top,
+                    colors=mean_c,
+                    label='mean')
+            plt.title(descriptor)
+            plt.legend()
+            plt.ylim((0,y_top))
+            plt.savefig(os.path.join(plot_folder,f'{descriptor}_sensitivity_plot.jpg'), dpi=600)
+            plt.savefig(os.path.join(plot_folder,f'{descriptor}_sensitivity_plot.eps'), dpi=600)
+            if show_plot:
+                plt.show()
+            else:
+                plt.close()
+
+        # return values
+        return median_sens, mean_sens
+
+
+##########################################
+
 class Preprocess():
     
     '''
-    Functions used to preprocess spectra
+    Standalone functions used to preprocess spectra
 
        
     RESAMPLE SPECTRA
