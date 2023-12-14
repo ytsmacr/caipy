@@ -2,7 +2,7 @@
 import pandas as pd
 import numpy as np
 from math import sqrt
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, r2_score
 from statistics import mean, median
 from tqdm import tqdm
 import os
@@ -26,7 +26,7 @@ from sklearn.pipeline import Pipeline
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 12 December 2023
+Last updated 14 December 2023
 
 Standalone functions and classes used by other programs in caipy.
 
@@ -181,6 +181,101 @@ class Analyze():
     Standalone functions for commonly used analyses
     '''
 
+    def calculate_loq_median_recalculate_rmse_r2(
+        variable:str, # variable ID'd in the model output files
+        reg_method: str, # regression method ID'd in the model output files
+        sensitivity: float, # instrument sensitivity
+        folder_path: str # path of folder containing model output files
+        ):
+    
+        '''
+        This function comes after spectral_regression_modelling and calculates LOQ
+        along with a few other things. The resulting dictionary can be simply merged
+        with the standard results file after converting to DataFrame. 
+        
+        I'm inclined to either integrate this with the spectral_regression_modelling
+        procedure, or keep it distinct because the user also needs to feed in the 
+        sensitivity. For now, I think I'm happy to keep them separate - maybe this 
+        function will become obsolete if/when I integrate it.
+
+        Will have to think about how the instrument sensitivities are stored or
+        fed if becomes integrated.
+        '''
+
+        print('**NOTE**: Sensitivity must be calculated from spectra processed identically to model training spectra')
+
+        # every RMSE should change with the LOQ, but don't know how I could calculate it for the RMSECV
+
+        # prep files
+        coeff_df = pd.read_csv(os.path.join(folder_path, f'{variable}_{reg_method}_coefs.csv'))
+        train_df = pd.read_csv(os.path.join(folder_path, f'{variable}_{reg_method}_train_pred_true.csv'))
+        try:
+            test_df = pd.read_csv(os.path.join(folder_path, f'{variable}_{reg_method}_test_pred_true.csv'))
+            has_test = True
+        except:
+            has_test = False
+        
+        # calculate LOQ
+        vector = pow(pow(coeff_df['coef'], 2).sum(),0.5)  #square root of sum of squares
+        loq = 10 * vector * sensitivity
+
+        pred = f'{element}_pred'
+        true = f'{element}_actual'
+
+        #median before
+        train_median = round(median(train_df[true].values),2)
+        # remove those below LOQ
+        train_above_loq = train_df[train_df[pred]>loq].copy()
+        # recalculate metrics
+        rev_rmsec = sqrt(mean_squared_error(train_above_loq[true], train_above_loq[pred]))
+        rev_train_r2 = r2_score(train_above_loq[true], train_above_loq[pred])
+        rev_train_adj_r2 = 1 - (1-rev_train_r2)*(len(train_above_loq) - 1) / (len(train_above_loq) - (train_above_loq.shape[1] - 1) - 1)
+        rev_train_median = round(median(train_above_loq[true].values),2)
+        rev_n_train = len(train_above_loq)
+
+        if has_test:
+            #median before
+            test_median = round(median(test_df[true].values),2)
+            # remove those below LOQ
+            test_above_loq = test_df[test_df[pred]>loq].copy()
+            # recalculate metrics
+            rev_rmsep = sqrt(mean_squared_error(test_above_loq[true], test_above_loq[pred]))
+            rev_test_r2 = r2_score(test_above_loq[true], test_above_loq[pred])
+            rev_test_adj_r2 = 1 - (1-rev_test_r2)*(len(test_above_loq) - 1) / (len(test_above_loq) - (test_above_loq.shape[1] - 1) - 1)
+            rev_test_median = round(median(test_above_loq[true].values),2)
+            rev_n_test = len(test_above_loq)
+
+            # cumulate results
+            result_dict = {
+                'median_conc_train':train_median,
+                'median_conc_test':test_median,
+                'loq':loq,
+                'n_train_above_loq':rev_n_train,
+                'median_conc_train_above_loq':rev_train_median,
+                'rmsec_above_loq':rev_rmsec,
+                'r2_train_above_loq':rev_train_r2,
+                'adj_r2_train_above_loq':rev_train_adj_r2,
+                'n_test_above_loq':rev_n_test,
+                'median_conc_test_above_loq':rev_test_median,
+                'rmsep_above_loq':rev_rmsep,
+                'r2_test_above_loq':rev_test_r2,
+                'adj_r2_test_above_loq':rev_test_adj_r2
+            }
+        else:
+            # cumulate results
+            result_dict = {
+                'median_conc_train':train_median,
+                'loq':loq,
+                'n_train_above_loq':rev_n_train,
+                'median_conc_train_above_loq':rev_train_median,
+                'rmsec_above_loq':rev_rmsec,
+                'r2_train_above_loq':rev_train_r2,
+                'adj_r2_train_above_loq':rev_train_adj_r2
+            }
+        
+        # finally, export
+        return result_dict
+
     def calculate_median_mean_sensitivity_plot(
             sensitivity_list: list, # list of sensitivity values
             descriptor: str, # name for plot
@@ -311,7 +406,7 @@ class Preprocess():
         min_step_axis = np.arange(start = axis[0], stop = axis[-1]+min_step, step=min_step)
 
         # resample spectra to match this
-        resampled_spectra = Resample.resample_to_match(spectra_to_resample, min_step_axis)
+        resampled_spectra = Preprocess.resample_to_match(spectra_to_resample, min_step_axis)
         return resampled_spectra
 
     '''
