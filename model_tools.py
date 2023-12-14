@@ -219,8 +219,8 @@ class Analyze():
         vector = pow(pow(coeff_df['coef'], 2).sum(),0.5)  #square root of sum of squares
         loq = 10 * vector * sensitivity
 
-        pred = f'{element}_pred'
-        true = f'{element}_actual'
+        pred = f'{variable}_pred'
+        true = f'{variable}_actual'
 
         #median before
         train_median = round(median(train_df[true].values),2)
@@ -283,6 +283,10 @@ class Analyze():
             make_plot = True,
             show_plot = True
             ):
+        
+        # drop na if there
+        sensitivity_list = [x for x in sensitivity_list if not pd.isna(x)]
+
         # median
         median_sens = round(median(sensitivity_list),9)
         #print("Median sensitivity:", round(median_sens,1))
