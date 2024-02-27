@@ -14,7 +14,7 @@ from model_tools import check_csv, check_asc, make_bool, convert_spectra, Plot
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 12 November 2023
+Last updated 27 February 2024
 
 Apply .asc sklearn model to input data. Returns .csv of predicted values.
 Optionally include metadata file for test samples to generate:
@@ -41,13 +41,15 @@ def check_model_file(file):
 #                     DEFINED VARIABLES                       #
 #-------------------------------------------------------------#
 # PROMPTS
-single_prompt = 'Are you applying more than one model? (y/n): '
-model_prompt = 'Model file path: (e.g. C:\Documents\SiO2_model.asc) '
-model_list_prompt = 'Model file paths, separated by a comma: (e.g. C:\Documents\SiO2_model.asc,C:\Documents\Al2O3_model.asc,C:\Documents\Sr_model.asc) '
-spectra_prompt = 'Test spectra file path: (e.g. C:\Documents\spectra.csv) '
-comps_prompt = 'Do you have compositions for these samples (y/n): '
-has_comps_prompt = 'Test metadata file path: (e.g. C:\Documents\metadata.csv) '
-out_prompt = 'File path to export results: '
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore")
+    single_prompt = 'Are you applying more than one model? (y/n): '
+    model_prompt = 'Model file path: (e.g. C:\Documents\SiO2_model.asc) '
+    model_list_prompt = 'Model file paths, separated by a comma: (e.g. C:\Documents\SiO2_model.asc,C:\Documents\Al2O3_model.asc,C:\Documents\Sr_model.asc) '
+    spectra_prompt = 'Test spectra file path: (e.g. C:\Documents\spectra.csv) '
+    comps_prompt = 'Do you have compositions for these samples (y/n): '
+    has_comps_prompt = 'Test metadata file path: (e.g. C:\Documents\metadata.csv) '
+    out_prompt = 'File path to export results: '
 
 #-------------------#
 # INPUT INFORMATION #
@@ -58,12 +60,12 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-m', '--model_file', type=str, default=None, help=model_prompt) # for a single model
 parser.add_argument('-ml', '--model_list', type=str, default=None, help=model_list_prompt) # for multiple models
 parser.add_argument('-sf', '--spectra_file', type=str, default=None, help=spectra_prompt)
-parser.add_argument('-hc', '--have_comps', type=bool, default=None, help='Boolean of whether the test data have compositions')
+parser.add_argument('-hc', '--comps',  action=argparse.BooleanOptionalAction) # to say no comps, provide --no-comps # to say comps, put --comps
 parser.add_argument('-mf', '--meta_file', type=str, default=None, help=has_comps_prompt)
 parser.add_argument('-o', '--outpath', type=str, default=None, help=out_prompt)
 
 args=parser.parse_args()
-have_comps = args.have_comps
+have_comps = args.comps
 model_file = args.model_file
 if model_file is not None:
     model_file = model_file.replace("'","")
@@ -111,7 +113,7 @@ while not os.path.exists(spectra_file):
     spectra_file = check_csv(input(spectra_prompt))
 
 # have compositions for test samples?
-if (have_comps is None) and (meta_file is none):
+if (have_comps is None) and (meta_file is None):
     have_comps = make_bool(input(comps_prompt).lower())
     while have_comps == 'error':
         print('Error: Input needs to be either y or n')
@@ -133,11 +135,12 @@ if not os.path.exists(outpath):
     
 # load files
 spectra = pd.read_csv(spectra_file)
-if have_comps:
+if have_comps is True:
     meta = pd.read_csv(meta_file)
-
-# prep output file
-pred_df = meta[['pkey']].copy()
+    # prep output file
+    pred_df = meta[['pkey']].copy()
+else:
+    pred_df = pd.DataFrame({'pkey':spectra.columns[1:]})
 
 if have_comps is True:
     # OPEN RESULTS FILE
