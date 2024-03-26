@@ -1,0 +1,44 @@
+[tool.poetry]
+name = "caipy2.0"
+version = "0.1.0"
+description = ""
+authors = ["SanjanaYasna <sanyasna517@gmail.com>"]
+readme = "README.md"
+packages = [
+    { include = "tests"},
+    { include = "src/main"}
+]
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.13"
+jupyter = "^1.0.0"
+matplotlib= "^3.8.1"
+numpy= "^1.26.1"
+pandas= "^2.1.2"
+scikit_learn= "^1.3.2"
+scipy= "^1.11.3"
+tqdm= "^4.66.1" 
+pytest = "^7.4.4"
+multiprocess = "^0.70.16"
+joblib = "^1.3.2"
+setuptools = "^42"
+
+[tool.poetry.scripts]
+preprocess = "prepare:main"
+prepare_spectra_only = "prepare:spectra_only"
+prepare_meta_only = "prepare:meta_only"
+just_stratify = "stratify_samples:main"
+models = "models:main"
+apply_models = "apply_model:main"
+analyze = "analyze:main"
+multiple_scripts = "script_sequence:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests"
+]
+pythonpath = "caipy2.0/caipy/src/main"

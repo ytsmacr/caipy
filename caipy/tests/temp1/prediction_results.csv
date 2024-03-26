@@ -1,0 +1,2 @@
+variable,model_type,n_pred,rmsep,r2_test,adj_r2_test
+Al2O3,PLS,349,3.6598164348814377,0.8010211626120697,0.800447736567724
