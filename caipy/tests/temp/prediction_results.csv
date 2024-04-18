@@ -1,0 +1,4 @@
+variable,model_type,n_pred,rmsep,r2_test,adj_r2_test
+Al2O3,OLS,1164,4.884245663532487e-13,1.0,1.0
+SiO2,OLS,1164,6.152456333543409e-13,1.0,1.0
+TiO2,OLS,1136,5.961387542063921e-14,1.0,1.0
