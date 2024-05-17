@@ -106,7 +106,7 @@ parser.add_argument('-o', '--outpath', type=str, default=None, help='Path of fol
 parser.add_argument('-s', '--spectra_name', type=str, default=None, help='Spectra filename')
 parser.add_argument('-m', '--meta_name', type=str, default=None, help='Metadata filename')
 parser.add_argument('-std', '--standard', type=bool, default=None, help='Follow a standard procedure for each variable (bool)')
-parser.add_argument('-dt', '--do_test', type=bool, default=None, help='Hold a fold out as test data (bool)')
+parser.add_argument('-dt', '--do_test', action='store_true', help='Hold a fold out as test data')
 parser.add_argument('-mt', '--method', type=str, default=None, help=f'Number corresponding to method selection from: {method_prompt}')
 parser.add_argument('-tf', '--test_fold', type=int, default=None, help='Integer of fold to be used for testing')
 parser.add_argument('-hp', '--hide_progress', type=bool, default=None, help='Hides progress bars')
@@ -129,7 +129,9 @@ meta_path = args.meta_name
 if meta_path is not None:
     meta_path = meta_path.replace("'","")
 standard = args.standard
+
 do_test = args.do_test
+
 method_type = args.method
 if method_type is not None:
     method_type = method_type.replace("'","")
@@ -269,7 +271,7 @@ for var in var_to_run:
     
     print(f'\nRunning for {var}')
     fold_col = form.get_fold_col(var)
-    
+
     # ask for testing and method choice if not standardized procedure
     if not standard:
         if do_test is None:
