@@ -5,7 +5,7 @@ from math import sqrt
 from sklearn.metrics import mean_squared_error, r2_score
 from statistics import mean, median
 from tqdm import tqdm
-import os
+import os, numbers
 import matplotlib.pyplot as plt 
 import matplotlib.cm as cm
 plt.set_loglevel('error')
@@ -26,7 +26,7 @@ from sklearn.pipeline import Pipeline
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 14 December 2023
+Last updated 17 May 2024
 
 Standalone functions and classes used by other programs in caipy.
 
@@ -341,6 +341,7 @@ class Preprocess():
     '''
 
     # resample spectra to given axis
+    @staticmethod
     def resample_to_match(spectra, spectra_to_match = None):
 
         spectra_to_resample = spectra.copy()
@@ -364,8 +365,12 @@ class Preprocess():
         elif isinstance(spectra_to_match,np.ndarray):
             new_axis = spectra_to_match
 
+        # if input is an array
+        elif isinstance(spectra_to_match,list):
+            new_axis = np.array(spectra_to_match)
+
         else:
-            print('Spectra to match must either be a dataframe with "wave" column, or a numpy array of values')
+            print('Spectra to match must either be a dataframe with "wave" column, or a list of values')
             return
 
         old_axis = spectra_to_resample['wave'].to_numpy()
@@ -385,6 +390,7 @@ class Preprocess():
         return new_spectra
 
     # resample uniformly to minimum step size
+    @staticmethod
     def resample_to_min_step(spectra):
         
         spectra_to_resample = spectra.copy()
@@ -419,6 +425,7 @@ class Preprocess():
 
     # airPLS baseline removal
     ## recommend that resample to min step size first ##
+    @staticmethod
     def AirPLS(spectra,
                l = 100):
 
@@ -449,7 +456,76 @@ class Preprocess():
     NORMALIZATION
     '''
 
+    @staticmethod
+    def band_normalize(spectra:pd.DataFrame, band):
+    # normalize the spectra to the value at a certain channel
+
+        # check that numeric
+        assert isinstance(band, numbers.Real)    
+
+        # check that within bounds of axis
+        src_axis = list(spectra['wave'])
+        try:
+            assert ((band > min(src_axis)) and (band < max(src_axis)))
+        except AssertionError:
+            print(f'Band location not within spectrum bounds ({min(src_axis)} - {max(src_axis)})')
+
+        # GET VALUE AT BAND LOCATION
+        needs_resampling = False
+        new_axis = src_axis.copy()
+        src_spectra = spectra.copy()
+
+        # find closest value
+        closest_wave = min(src_axis, key=lambda x:abs(x-band))
+        closest_i = src_axis.index(closest_wave)
+        
+        # see if needs to go before
+        if closest_wave > band:
+            needs_resampling = True
+            # add before (will replace index so stay the same)
+            new_axis.insert(closest_i, band)
+
+        elif closest_wave < band:
+            needs_resampling = True
+            # add after
+            new_axis.insert(closest_i+1, band)
+
+        # resample to add the band location value if needed
+        if needs_resampling:
+            new_spectra = Preprocess().resample_to_match(src_spectra, new_axis)
+        else:
+            new_spectra = src_spectra.copy()
+
+        # get presentation of the band in the axis
+        band = min(new_axis, key=lambda x:abs(x-band))
+
+        # assign value to normalize to
+        band_vals = new_spectra.set_index('wave').loc[band].values
+        new_spectra = new_spectra.set_index('wave').T
+        new_spectra.insert(0,'band_value',band_vals)
+
+        # normalize
+        normed_spectra = (
+            new_spectra
+            .div(new_spectra['band_value'], axis=0) # normalize
+            .T # restructure
+            .drop(index='band_value') # remove reference col
+        ) 
+
+        # remove the added row by resampling if necessary
+        if needs_resampling:
+            normed_spectra.drop(index=band, inplace=True)
+
+        # reset and check matches input
+        normed_spectra.reset_index(inplace=True)
+        assert list(normed_spectra['wave']) == list(src_spectra['wave'])
+
+        # extract the band value per spectrum
+        return normed_spectra
+
+
     # normalize each df subset of data, then concatenate
+    @staticmethod
     def normalize_regions(df_list: list,
                           method = 'l1'):
 
@@ -497,6 +573,7 @@ class Preprocess():
         return normed_dataset
 
     # normalize by SuperCam method
+    @staticmethod
     def norm5_SC(spectra):
         
         spectra_tonorm = spectra.copy()
@@ -517,6 +594,7 @@ class Preprocess():
         return normed_spectra
 
     # normalize by ChemCam method
+    @staticmethod
     def norm3_CL(spectra):
         
         spectra_tonorm = spectra.copy()
@@ -532,6 +610,7 @@ class Preprocess():
         return normed_spectra
 
     # normalize by SuperLIBS 10K method
+    @staticmethod
     def norm3_SL_10K(spectra):
         
         spectra_tonorm = spectra.copy()
@@ -547,6 +626,7 @@ class Preprocess():
         return normed_spectra
 
     # normalize by SuperLIBS 18K method
+    @staticmethod
     def norm3_SL_18K(spectra):
         
         spectra_tonorm = spectra.copy()
