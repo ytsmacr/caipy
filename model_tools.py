@@ -24,6 +24,8 @@ from sklearn.neighbors import KNeighborsRegressor
 from sklearn.svm import SVR
 from sklearn.pipeline import Pipeline
 
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '.'))
+
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
 Last updated 17 May 2024
@@ -352,7 +354,7 @@ class Preprocess():
 
         if spectra_to_match is None:
             print('Resampling to SuperCam -2px shifted wavelength axis by default')
-            spectra_to_match = pd.read_csv(os.path.join('data','SuperCam_cal_shift-2pix_axis.csv'))
+            spectra_to_match = pd.read_csv(os.path.join(ROOT_DIR, 'data','SuperCam_cal_shift-2pix_axis.csv'))
 
         # if input is a dataframe
         if isinstance(spectra_to_match,pd.DataFrame):
@@ -403,9 +405,9 @@ class Preprocess():
 
         # get step sizes
         step_set = set()
-        for i in np.arange(len(wave))[:-1]:
-            current = wave[i]
-            next = wave[i+1]
+        for i in np.arange(len(axis))[:-1]:
+            current = axis[i]
+            next = axis[i+1]
             step = next-current
             step_set.add(step)
 
