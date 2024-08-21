@@ -105,11 +105,11 @@ parser.add_argument('-f', '--datafolder', type=str, default=None, help='Path of 
 parser.add_argument('-o', '--outpath', type=str, default=None, help='Path of folder to output results')
 parser.add_argument('-s', '--spectra_name', type=str, default=None, help='Spectra filename')
 parser.add_argument('-m', '--meta_name', type=str, default=None, help='Metadata filename')
-parser.add_argument('-std', '--standard', type=bool, default=None, help='Follow a standard procedure for each variable (bool)')
-parser.add_argument('-dt', '--do_test', action='store_true', help='Hold a fold out as test data')
+parser.add_argument('-std', '--standard', action='store_true', help='Follow a standard procedure for each variable (store=true)')
+parser.add_argument('-dt', '--do_test', action='store_true', help='Hold a fold out as test data (store=true)')
 parser.add_argument('-mt', '--method', type=str, default=None, help=f'Number corresponding to method selection from: {method_prompt}')
 parser.add_argument('-tf', '--test_fold', type=int, default=None, help='Integer of fold to be used for testing')
-parser.add_argument('-hp', '--hide_progress', type=bool, default=None, help='Hides progress bars')
+parser.add_argument('-hp', '--hide_progress', action='store_true', help='Hides progress bars (store=true)')
 parser.add_argument('-mc', '--max_components', type=int, default=None, help='Sets the maximum PLS components')
 parser.add_argument('-np', '--num_params', type=int, default=None, help='Sets the number of values to test for LASSO, Ridge, ElasticNet, SVR')
 parser.add_argument('-pd', '--poly_deg', type=int, default=None, help='Sets the polynomial degree for SVR and kernel PCR')
@@ -169,8 +169,8 @@ else:
     meta = pd.read_csv(os.path.join(data_folder, meta_path))
 
 # show the progress bars and results of CV
-if hide_progress is None:
-    hide_progress = False
+# if hide_progress is None:
+#     hide_progress = False
 
 if max_components_ is None:
     max_components_ = 30
