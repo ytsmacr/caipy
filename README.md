@@ -10,7 +10,7 @@ From Anaconda Prompt command line:
 1. Create new conda environment (you can call it something other than 'caipy'): `conda create -n caipy`
 2. Activate the environment:	`conda activate caipy`
 3. Navigate to path containing files: `cd your_path_here`
-4. Install required packages: `pip install -r requirements.txt`
+4. Install required packages: `pip install -r requirements.txt` (if you don't have pip you can install it with `conda install pip`
 
 ### To run files
 1. Activate the environment: `conda activate caipy`
