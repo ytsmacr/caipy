@@ -7,7 +7,7 @@ If you don't have Anaconda already, you can [download it for free](anaconda.com)
 
 From Anaconda Prompt command line:
 ### Initial setup
-1. Create new conda environment (you can call it something other than 'caipy'): `conda create -n caipy`
+1. Create new conda environment (you can call it something other than 'caipy'): `conda create -n caipy python=3.12.0 ipython`
 2. Activate the environment:	`conda activate caipy`
 3. Navigate to path containing files: `cd your_path_here`
 4. Install required packages: `pip install -r requirements.txt` (if you don't have pip you can install it with `conda install pip`
