@@ -895,7 +895,7 @@ class Model():
 
         cv_dict = dict()
         for alpha in tqdm(alpha_range, desc='alpha value', disable=self.hide_progress):
-            model = Lasso(alpha=alpha)
+            model = Lasso(alpha=alpha, random_state=42)
             temp_rmsecv = Model.run_CV(self, model)
             cv_dict[temp_rmsecv] = alpha
 
