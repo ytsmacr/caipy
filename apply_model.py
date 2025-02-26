@@ -44,11 +44,11 @@ def check_model_file(file):
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore")
     single_prompt = 'Are you applying more than one model? (y/n): '
-    model_prompt = 'Model file path: (e.g. C:\Documents\SiO2_model.asc) '
-    model_list_prompt = 'Model file paths, separated by a comma: (e.g. C:\Documents\SiO2_model.asc,C:\Documents\Al2O3_model.asc,C:\Documents\Sr_model.asc) '
-    spectra_prompt = 'Test spectra file path: (e.g. C:\Documents\spectra.csv) '
+    model_prompt = 'Model file path: (e.g. C:/Documents/SiO2_model.asc) '
+    model_list_prompt = 'Model file paths, separated by a comma: (e.g. C:/Documents/SiO2_model.asc,C:/Documents/Al2O3_model.asc,C:/Documents/Sr_model.asc) '
+    spectra_prompt = 'Test spectra file path: (e.g. C:/Documents/spectra.csv) '
     comps_prompt = 'Do you have compositions for these samples (y/n): '
-    has_comps_prompt = 'Test metadata file path: (e.g. C:\Documents\metadata.csv) '
+    has_comps_prompt = 'Test metadata file path: (e.g. C:/Documents/metadata.csv) '
     out_prompt = 'File path to export results: '
 
 #-------------------#
@@ -183,6 +183,7 @@ for i, model_file in enumerate(model_list):
                 var_cols = ', '.join([col for col in meta.columns if (col not in ['pkey', 'Sample Name', 'Sample_Name']) and ('Folds' not in col)])
                 print('Metadata columns to choose from: ', var_cols)
             var = input(f'Error: {var} not a metadata column. What is the relevant variable? ')
+            actual_col = f'{var}_actual'
             count += 1
     
         # add actual values
