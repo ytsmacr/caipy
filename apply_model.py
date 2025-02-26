@@ -159,13 +159,12 @@ for i, model_file in enumerate(model_list):
     # get variable and model information from filename if possible
     model_name = os.path.split(model_file)[1]
     if re.match('.+_.+_model\.asc$', model_name):
-        var = model_name.split('_')[0]
+        # first drop the suffix
+        model_name = model_name.replace("_model.asc", "")
+        method = model_name.split('_')[-1]
+        var = model_name.replace(f"_{method}", "")
     else:
         var = input('Error: Could not extract variable name from model filename.\nWhat is the relevant variable? ')
-    
-    if re.match('.+_.+_model.asc$', model_name):
-        method = model_name.split('_')[1]
-    else:
         method = input('Error: Could not extract regression method from model filename.\nWhat is the relevant method? ')
 
     # prep column names
@@ -179,12 +178,15 @@ for i, model_file in enumerate(model_list):
         # see if var in meta file
         count = 0
         while var not in meta.columns:
-            if count >= 1:
-                var_cols = ', '.join([col for col in meta.columns if (col not in ['pkey', 'Sample Name', 'Sample_Name']) and ('Folds' not in col)])
-                print('Metadata columns to choose from: ', var_cols)
-            var = input(f'Error: {var} not a metadata column. What is the relevant variable? ')
-            actual_col = f'{var}_actual'
-            count += 1
+            try:
+                var = var.replace('_',' ')
+            except:
+                if count >= 1:
+                    var_cols = ', '.join([col for col in meta.columns if (col not in ['pkey', 'Sample Name', 'Sample_Name']) and ('Folds' not in col)])
+                    print('Metadata columns to choose from: ', var_cols)
+                var = input(f'Error: {var} not a metadata column. What is the relevant variable? ')
+                count += 1
+        actual_col = f'{var}_actual'
     
         # add actual values
         for option in ['Sample_Name', 'Sample Name']:
