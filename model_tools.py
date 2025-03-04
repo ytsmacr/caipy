@@ -333,7 +333,7 @@ class Analyze():
 
 ##########################################
 
-class Preprocess():
+class Preprocess:
     
     '''
     Standalone functions used to preprocess spectra
