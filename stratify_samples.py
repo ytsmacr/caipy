@@ -36,7 +36,9 @@ parser.add_argument('-m', '--meta_file', type=str, default=None, help='Metadata 
 parser.add_argument('-n', '--n_folds', type=int, default=None, help='Number of folds to assign samples to')
 
 args=parser.parse_args()
-meta_file = args.meta_file.replace("'","")
+meta_file = args.meta_file
+if meta_file is not None:
+    meta_file = meta_file.replace("'","")
 #meta_file = args.meta_file.replace('"','')
 n_folds = args.n_folds
 
