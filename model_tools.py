@@ -379,7 +379,7 @@ class Preprocess():
 
         if list(new_axis) == list(old_axis):
             print('Spectral axes already matched')
-            return
+            return spectra_to_resample
 
         spectra_to_resample.drop('wave', axis=1, inplace=True)
         old_spectra = spectra_to_resample.T.to_numpy()
