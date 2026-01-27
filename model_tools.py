@@ -10,6 +10,8 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 plt.set_loglevel('error')
 
+from tkinter import Tk, filedialog, askdirectory
+
 # preprocessing
 from tools.airPLS import airPLS
 from tools.spectres import spectres
@@ -28,7 +30,7 @@ ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '.'))
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 17 May 2024
+Last updated 27 January 2026
 
 Standalone functions and classes used by other programs in caipy.
 
@@ -137,42 +139,47 @@ def get_first_local_minimum(li):
     return min
 
 # get user-input data folder
-def get_data_folder():
-    in_prompt = 'Folder path containing data: '
-    data_folder = input(in_prompt)
-    while not os.path.exists(data_folder):
-        print(f'Error: path {data_folder} does not exist\n')
-        data_folder = input(in_prompt)
+def get_data_folder(prompt="Select folder containing data files"):
+    data_folder = filedialog.askdirectory(
+        title=prompt,
+        mustexist=True
+    )
     all_files = os.listdir(data_folder)
     return data_folder, all_files
 
+# get user-input asc model file
+def get_model_path(prompt="Select model file path (.asc)"):
+    model_path = filedialog.askopenfilename(
+        title=prompt,
+        filetypes=[("ASC files", "*.asc")],
+        mustexist=True
+    )
+    return model_path
+
 # get user-input spectra path
-def get_spectra_path(data_folder, all_files):
-    spectra_prompt = 'Spectra filename: '
-    spectra_file = check_csv(input(spectra_prompt))
-    while spectra_file not in all_files:
-        print(f'Error: file {spectra_file} not in data folder\n')
-        spectra_file = check_csv(input(spectra_prompt))
-    spectra_path = os.path.join(data_folder, spectra_file)
+def get_spectra_path(prompt="Select spectra file"): 
+    spectra_path = filedialog.askopenfilename(
+        title=prompt,
+        filetypes=[("CSV files", "*.csv")],
+        mustexist=True
+    )
     return spectra_path
 
 # get user-input metadata path
-def get_meta_path(data_folder, all_files):
-    meta_prompt = 'Metadata filename: '
-    meta_file = check_csv(input(meta_prompt))
-    while meta_file not in all_files:
-        print(f'Error: file {meta_file} not in data folder\n')
-        meta_file = check_csv(input(meta_prompt))
-    meta_path = os.path.join(data_folder, meta_file)
+def get_meta_path(): 
+    meta_path = filedialog.askopenfilename(
+        title="Select metadata file",
+        filetypes=[("CSV files", "*.csv")],
+        mustexist=True
+    )
     return meta_path
 
 # get user-input output folder
 def get_out_folder():
-    out_prompt = 'Folder path to export results: '
-    outpath = input(out_prompt)
-    while not os.path.exists(outpath):
-        print(f'Error: path {outpath} does not exist\n')
-        outpath = input(out_prompt)
+    outpath = filedialog.askdirectory(
+        title='Select folder to export results',
+        mustexist=True
+    )
     return outpath
 
 ##########################################

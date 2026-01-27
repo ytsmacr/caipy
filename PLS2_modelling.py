@@ -2,19 +2,24 @@ import pandas as pd
 import numpy as np
 from sklearn.metrics import mean_squared_error, r2_score
 from math import sqrt
-import warnings
+import os
 import pickle
 from statistics import mean
 from tqdm import tqdm
 from matplotlib import pyplot as plt
 import matplotlib.ticker as mticker
 from sklearn.cross_decomposition import PLSRegression
-from model_tools import *
+from model_tools import (get_spectra_path, 
+                         get_meta_path, 
+                         get_out_folder,
+                         select_spectra,
+                         get_first_local_minimum,
+                         Plot)
 import time
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 26 September 2022
+Last updated 27 January 2026
 
 Script to make PLS2 models, where one model predicts multiple y variables. 
 If only modelling for one variable, PLS1 regression is included in
@@ -24,9 +29,12 @@ spectral_regression_modelling.py
 #-------------------#
 # INPUT INFORMATION #
 #-------------------#
-data_folder, all_files = get_data_folder()
-spectra_path = get_spectra_path(data_folder, all_files)
-meta_path = get_meta_path(data_folder, all_files)
+# data_folder, all_files = get_data_folder()
+# spectra_path = get_spectra_path(data_folder, all_files)
+# meta_path = get_meta_path(data_folder, all_files)
+
+spectra_path = get_spectra_path()
+meta_path = get_meta_path()
 outpath = get_out_folder()
     
 # define maximum number of components
@@ -214,8 +222,8 @@ axes[0].set_title('RMSE-CV', fontsize=14)
 axes[n_var-1].set_xlabel('Number of components', fontsize=12)  
 # save plot
 plt.tight_layout()
-plt.savefig(f"{outpath}\\PLS2_RMSECV_plots_{all_var.replace(', ','_')}.jpg", dpi=600)
-plt.savefig(f"{outpath}\\PLS2_RMSECV_plots_{all_var.replace(', ','_')}.eps", dpi=600)
+plt.savefig(os.path.join(outpath,f"PLS2_RMSECV_plots_{all_var.replace(', ','_')}.jpg"), dpi=600)
+plt.savefig(os.path.join(outpath,f"PLS2_RMSECV_plots_{all_var.replace(', ','_')}.eps"), dpi=600)
 # show plot
 plt.show(block=False)
 
@@ -238,7 +246,7 @@ X_train = select_spectra(spectra, train_names)
 model = PLSRegression(n_components = component_to_use, scale=False)
 model.fit(X_train, y_train)
 # export
-pickle.dump(model, open(f"{outpath}\\PLS2_model_{all_var.replace(', ','_')}.asc", 'wb'), protocol=0)
+pickle.dump(model, open(os.path.join(outpath, f"PLS2_model_{all_var.replace(', ','_')}.asc"), 'wb'), protocol=0)
 
 #----------------#
 # PRED v. ACTUAL #
@@ -260,7 +268,7 @@ train_pred_true.insert(0,'pkey',train_names)
 if 'Sample_Name' in train_meta.columns:
     train_pred_true.insert(1,'Sample_Name',train_meta['Sample_Name'])
 
-train_pred_true.to_csv(f"{outpath}\\PLS2_train_pred_true_{all_var.replace(', ','_')}.csv", index=False)
+train_pred_true.to_csv(os.path.join(outpath, f"PLS2_train_pred_true_{all_var.replace(', ','_')}.csv"), index=False)
 
 #--------------#
 # COEFFICIENTS #
@@ -268,7 +276,7 @@ train_pred_true.to_csv(f"{outpath}\\PLS2_train_pred_true_{all_var.replace(', ','
 coef_df = pd.DataFrame(model.coef_)
 coef_df.columns = [f'{var}_coeffs' for var in var_to_run]
 coef_df.insert(0,'wave',axis)
-coef_df.to_csv(f"{outpath}\\PLS2_coeff_{all_var.replace(', ','_')}.csv", index=False)
+coef_df.to_csv(os.path.join(outpath, f"PLS2_coeff_{all_var.replace(', ','_')}.csv"), index=False)
 
 #------------#
 # MODEL INFO #
