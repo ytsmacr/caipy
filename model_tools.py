@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 plt.set_loglevel('error')
 
-from tkinter import Tk, filedialog, askdirectory
+from tkinter import Tk, filedialog
 
 # preprocessing
 from tools.airPLS import airPLS
