@@ -1,5 +1,6 @@
 # standard packages
 import pandas as pd
+#from SuperCam.tools.PyHAT.source_code.PyHAT_2022_07_18.libpyhat.data.spectrum import Spectrum
 import numpy as np
 from math import sqrt
 from sklearn.metrics import mean_squared_error, r2_score
@@ -16,6 +17,7 @@ from tkinter import Tk, filedialog
 from tools.airPLS import airPLS
 from tools.spectres import spectres
 from sklearn.preprocessing import normalize
+from BaselineRemoval import BaselineRemoval
 
 # modelling
 from sklearn.linear_model import Lasso, Ridge, ElasticNet, LinearRegression, OrthogonalMatchingPursuit
@@ -26,11 +28,18 @@ from sklearn.neighbors import KNeighborsRegressor
 from sklearn.svm import SVR
 from sklearn.pipeline import Pipeline
 
+# smoothing
+from astropy import units as au
+from specutils.spectra import Spectrum
+from specutils.manipulation import trapezoid_smooth, box_smooth
+from scipy.signal import savgol_filter
+from scipy.ndimage import gaussian_filter1d
+
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '.'))
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 27 January 2026
+Last updated 19 September 2026
 
 Standalone functions and classes used by other programs in caipy.
 
@@ -448,11 +457,83 @@ class Preprocess:
 
         spec_list = []
 
-        for column in spectra_to_blr.columns[1:]:
+        for column in tqdm(spectra_to_blr.columns[1:]):
             spectrum = spectra_to_blr[column]
-            bl = airPLS(spectrum, lambda_ = 1)
+            bl = airPLS(spectrum, lambda_ = l)
             blr_spectrum = spectrum - bl
             blr_spectrum = blr_spectrum.tolist()
+            spec_list.append(blr_spectrum)
+
+        blr_spectra = pd.DataFrame(spec_list).T
+        blr_spectra.columns = spectra_to_blr.columns[1:]
+        blr_spectra.insert(0, 'wave', spectra_to_blr['wave'])
+
+        return blr_spectra
+
+    # Baseline removal methods for Raman spectra
+    # https://pypi.org/project/BaselineRemoval/
+
+    @staticmethod
+    def ModPoly(spectra, poly_order=2):
+        spectra_to_blr = spectra.copy()
+                
+        if spectra_to_blr.isnull().values.any():
+            raise ValueError('The spectra contains NA values - remove and rerun')
+        
+        if spectra_to_blr.columns[0] != 'wave':
+            raise ValueError('This function needs the first column to be the axis, "wave"')
+
+        spec_list = []
+
+        for column in tqdm(spectra_to_blr.columns[1:]):
+            spectrum = spectra_to_blr[column]
+            blr_spectrum = BaselineRemoval(spectrum).ModPoly(poly_order)
+            spec_list.append(blr_spectrum)
+
+        blr_spectra = pd.DataFrame(spec_list).T
+        blr_spectra.columns = spectra_to_blr.columns[1:]
+        blr_spectra.insert(0, 'wave', spectra_to_blr['wave'])
+
+        return blr_spectra
+
+    @staticmethod
+    def IModPoly(spectra, poly_order=2):
+        spectra_to_blr = spectra.copy()
+                
+        if spectra_to_blr.isnull().values.any():
+            raise ValueError('The spectra contains NA values - remove and rerun')
+        
+        if spectra_to_blr.columns[0] != 'wave':
+            raise ValueError('This function needs the first column to be the axis, "wave"')
+
+        spec_list = []
+
+        for column in tqdm(spectra_to_blr.columns[1:]):
+            spectrum = spectra_to_blr[column]
+            blr_spectrum = BaselineRemoval(spectrum).IModPoly(poly_order)
+            spec_list.append(blr_spectrum)
+
+        blr_spectra = pd.DataFrame(spec_list).T
+        blr_spectra.columns = spectra_to_blr.columns[1:]
+        blr_spectra.insert(0, 'wave', spectra_to_blr['wave'])
+
+        return blr_spectra
+
+    @staticmethod
+    def ZhangFit(spectra, poly_order=2):
+        spectra_to_blr = spectra.copy()
+                
+        if spectra_to_blr.isnull().values.any():
+            raise ValueError('The spectra contains NA values - remove and rerun')
+        
+        if spectra_to_blr.columns[0] != 'wave':
+            raise ValueError('This function needs the first column to be the axis, "wave"')
+
+        spec_list = []
+
+        for column in spectra_to_blr.columns[1:]:
+            spectrum = spectra_to_blr[column]
+            blr_spectrum = BaselineRemoval(spectrum).ZhangFit(poly_order)
             spec_list.append(blr_spectrum)
 
         blr_spectra = pd.DataFrame(spec_list).T
@@ -533,6 +614,15 @@ class Preprocess:
         return normed_spectra
 
 
+    # make common norms more streamlined
+    @staticmethod
+    def l1_norm(spectra:pd.DataFrame):
+        return Preprocess.normalize_regions([spectra], method = 'l1')
+
+    @staticmethod
+    def l2_norm(spectra:pd.DataFrame):
+        return Preprocess.normalize_regions([spectra], method = 'l2')
+
     # normalize each df subset of data, then concatenate
     @staticmethod
     def normalize_regions(df_list: list,
@@ -544,8 +634,11 @@ class Preprocess:
         if method == 'l1':
             def normalization(array):
                 return (array/sum(array))
+        elif method == 'l2':
+            def normalization(array):
+                return (array/pow(sum(pow(array,2)),0.5))
         else:
-            print('Method not defined')
+            print('Method not defined: option are l1 or l2')
             return
 
         for df in df_list:
@@ -1216,3 +1309,406 @@ class Plot():
         plt.savefig(os.path.join(path, f'{var}_{method}_{type}_pred_true_plot.jpg'), dpi=600)
         plt.savefig(os.path.join(path, f'{var}_{method}_{type}_pred_true_plot.eps'), dpi=600)
         plt.close()
+
+class Smooth:
+    '''
+    Functions for smoothing spectra
+
+    Modified from venus_tools
+    '''
+
+    @staticmethod
+    # calculate difference
+    def get_rmsd(original, smoothed):
+        return np.format_float_scientific(np.sqrt((np.array(original) - np.array(smoothed)) ** 2).mean(),precision=2)
+
+    @staticmethod
+    def fix_box_smoothed_edges(original_spectrum: np.array, 
+                               smoothed_spectrum: np.array, 
+                               n_px: int):    
+        '''
+        A function that smooths the edges of
+        box-smoothed spectra, by iteratively
+        summing over fewer points as it
+        approaches the edge
+
+        Parameters
+        ----------
+        original_spectrum : np.array
+            Original, unsmooth spectrum intensities
+        smoothed_spectrum : np.array with astropy units
+            Smoothed astropy spectrum flux values
+        n_px : int
+            Number of pixels used for original smoothing
+
+        Returns
+        -------
+        new_smoothed_spectrum : list
+            Smoothed spectrum with edges fixed
+        '''
+                                
+        width = int(n_px/2)
+        # smooth beginning
+        index_start = np.arange(width)
+        new_smooth_start = []
+        for i in index_start:
+            avg_area = original_spectrum[:i+i+2]
+            if len(avg_area)==1:
+                smooth_val = original_spectrum[i]
+            if len(avg_area)==2:
+                smooth_val = avg_area.mean()
+            else:
+                smooth_val = (0.5*avg_area[0] + sum(avg_area[1:-1]) + 0.5*avg_area[-1])/(len(avg_area)-1)
+            new_smooth_start.append(smooth_val)
+        
+        # smooth end
+        index_end = np.flip((np.arange(start=1, stop=width+1)*-1))
+        new_smooth_end = []
+        for i in index_end:
+            k = i + len(original_spectrum)
+            avg_area = original_spectrum[k+i:]
+            if len(avg_area)==1:
+                smooth_val = original_spectrum[k]
+            elif len(avg_area)==2:
+                smooth_val = avg_area.mean()
+            else:
+                smooth_val = (0.5*avg_area[0] + sum(avg_area[1:-1]) + 0.5*avg_area[-1])/(len(avg_area)-1)
+            new_smooth_end.append(smooth_val)
+        
+        middle_smoothed = list(smoothed_spectrum[width:-width])
+
+        # join up more cleanly
+        start_anchor = new_smooth_start[-2]
+        middle_start_anchor = middle_smoothed[0]
+        new_last_start = (start_anchor+middle_start_anchor)/2
+        new_smooth_start[-1] = new_last_start
+
+        end_anchor = new_smooth_end[1]
+        middle_end_anchor = middle_smoothed[-1]
+        new_first_end = (end_anchor+middle_end_anchor)/2
+        new_smooth_end[0] = new_first_end
+
+        # make new spectrum
+        new_smoothed_spectrum = []
+        new_smoothed_spectrum.extend(new_smooth_start)
+        new_smoothed_spectrum.extend(middle_smoothed)
+        new_smoothed_spectrum.extend(new_smooth_end)
+
+        return new_smoothed_spectrum
+
+    @staticmethod
+    def comparison_plot(method, 
+                        sample, 
+                        axis, 
+                        units, 
+                        original_spectrum, 
+                        smoothed_spectrum, 
+                        n_px, 
+                        rmsd, 
+                        export_folder=None,
+                        export=False, 
+                        show=True):
+
+        '''
+        A function that plots the smoothed spectrum
+        over the original, unsmoothed spectrum.
+
+        Parameters
+        ----------
+        sample : str
+            Name of original spectrum file.
+        axis : np.array
+            Wavelength axis of the spectra.
+        original_spectrum : np.array
+            Original, unsmooth spectrum intensities.
+        smoothed_spectrum : np.array with astropy units
+            Smoothed astropy spectrum flux values.
+        n_px : int
+            Number of pixels used for original smoothing.
+        export : bool, default False
+            Whether to export the plots.
+        show : bool, default True
+            Whether to show the plots.
+
+        Returns
+        -------
+        Example_{method}_smoothing_comparison_{sample}.jpg
+            Plot comparing the full original spectrum and the full smoothed spectrum.
+        '''
+
+        plus_buffer = 1.01
+        minus_buffer = 0.99
+    
+        if method in ['running_avg','trapezoid','savgol']:
+            method = f'{method}_{n_px}_px'
+        elif method == 'gaussian':
+            method = f'{method}_{n_px}_std'
+            
+        full_max = max(original_spectrum)*plus_buffer
+        full_min = min(original_spectrum)*minus_buffer
+        
+        fig,ax = plt.subplots(figsize=(10,4))
+        ax.plot(axis, original_spectrum, c='black', label='Original',zorder=0)
+        if smoothed_spectrum != None:
+            ax.plot(axis, smoothed_spectrum, c='orange', label='Smoothed',zorder=1)
+        plt.ylim((full_min,full_max))
+        plt.ylabel('Intensity')
+        plt.xlabel(units.capitalize())
+        plt.legend()
+        plt.title(f'Full spectrum comparison for {method}    RMSD: {rmsd}')
+        if export:
+            plt.savefig(os.path.join(
+                export_folder,
+                f'Example_{method}_smoothing_comparison_{sample}.jpg'),dpi=600)
+        if show:
+            plt.show()
+        else:
+            plt.close()
+
+    @staticmethod
+    def edge_comparison_plot(method, 
+                             sample, 
+                             axis, 
+                             units, 
+                             original_spectrum, 
+                             original_smoothed, 
+                             fixed_smoothed, 
+                             n_px, 
+                             window_size, 
+                             export_folder=None, 
+                             export=False, 
+                             show=True):
+
+        '''
+        A function that plots the unsmoothed spectrum,
+        its smoothed spectrum, and the smoothed spectrum
+        with its edges fixed on the edges of the spectra.
+
+        Parameters
+        ----------
+        sample : str
+            Name of original spectrum file.
+        axis : np.array
+            Wavelength axis of the spectra.
+        original_spectrum : np.array
+            Original, unsmooth spectrum intensities.
+        original_smoothed : np.array with astropy units
+            Smoothed astropy spectrum flux values.
+        fixed_smoothed : list
+            Smoothed spectrum with edges fixed.
+        n_px : int
+            Number of pixels used for original smoothing.
+        export : bool, default False
+            Whether to export the plots.
+        show : bool, default True
+            Whether to show the plots.
+
+        Returns
+        -------
+        Example_{method}_smoothing_edge_comparison_{sample}.jpg
+            Plot comparing spectra at the edges (where it was fixed).
+        '''
+    
+        if method in ['running_avg','trapezoid']:
+            method = f'{method}_{n_px}_px'
+        elif method == 'gaussian':
+            method = f'{method}_{n_px}_std'
+            
+        plus_buffer = 1.0005
+        minus_buffer = 0.9995
+        offset_buffer = 50
+        a = 0.7
+
+        # start edge
+        start_original_spectrum = original_spectrum[:window_size*2]
+        
+        # base plot limits off this
+        start_max = max(start_original_spectrum)*plus_buffer
+        start_min = min(start_original_spectrum)*minus_buffer
+        start_offset = round((start_max-start_min)/offset_buffer,4)
+
+        start_original_smoothed = [x+start_offset for x in original_smoothed[:window_size*2]]
+        if fixed_smoothed != None:
+            start_fixed_smoothed = fixed_smoothed[:window_size*2]
+        start_axis = axis[:window_size*2]
+
+        # end edge
+        end_original_spectrum = original_spectrum[-window_size*2:]
+
+        end_max = max(end_original_spectrum)*plus_buffer
+        end_min = min(end_original_spectrum)*minus_buffer
+        end_offset = round((end_max-end_min)/offset_buffer,4)
+
+        end_original_smoothed = [x+end_offset for x in original_smoothed[-window_size*2:]]
+        if fixed_smoothed != None:
+            end_fixed_smoothed = fixed_smoothed[-window_size*2:]
+        end_axis = axis[-window_size*2:]
+
+        # make plot
+        fig,ax = plt.subplots(figsize=(12,4),ncols=2)
+        ax[0].plot(start_axis, start_original_spectrum, c='black', label='Original',zorder=0, alpha=a)
+        if fixed_smoothed != None:
+            ax[0].plot(start_axis, start_fixed_smoothed, c='blue', label='Smoothed with edges fixed',zorder=2)
+        ax[0].plot(start_axis, start_original_smoothed, c='red', label=f'Original smoothed (offset+{start_offset})',zorder=1, alpha=a)
+
+        ax[0].set_ylim((start_min,start_max))
+        ax[0].set_xlabel(units)
+        ax[0].set_ylabel('Intensity')
+        ax[0].set_title(f'Smoothing at start for {method}')
+
+        ax[1].plot(end_axis, end_original_spectrum, c='black', label='Original',zorder=0, alpha=a)
+        if fixed_smoothed != None:
+            ax[1].plot(end_axis, end_fixed_smoothed, c='blue', label='Smoothed with edges fixed',zorder=2)
+        ax[1].plot(end_axis, end_original_smoothed, c='red', label=f'Original smoothed (offset+{end_offset})',zorder=1, alpha=a)
+
+        ax[1].set_ylim((end_min,end_max))
+        ax[1].set_xlabel(units.capitalize())
+        ax[1].set_title(f'Smoothing at end for {method}')
+        
+        ax[0].legend()
+        plt.tight_layout()
+        if export:
+            plt.savefig(os.path.join(
+                export_folder,
+                f'Example_{method}_smoothing_edge_comparison_{sample}.jpg'),dpi=600)
+        if show:
+            plt.show()
+        else:
+            plt.close()
+
+    @staticmethod
+    def do_smoothing(spectra: pd.DataFrame, 
+                    metadata: pd.DataFrame,
+                    units: str,
+                    methods: list = None,
+                    do_plots=False,
+                    show_plots=False,
+                    export_plots=False,
+                    widths_trapezoid_running_avg=[100, 50],
+                    widths_savgol=[50, 100, 150],
+                    widths_gaussian=[10, 25, 50]):
+        '''
+        Smooths emissivity spectra at a variety of parameters
+        I chose in a previous investigation
+
+        Takes methods as a list - which methods to smooth by
+        '''
+
+        if show_plots is True:
+            do_plots = True
+
+        # get wave axis
+        assert 'wave' in spectra.columns, 'Spectra dataframe must have a "wave" column'
+        axis = np.array(spectra['wave'])
+
+        assert units in ['nm','um','cm-1','wavenumber'], f'Units must be one of: nm, um, cm-1. You provided {units}'
+
+        if units == 'nm':
+            formatted_axis = axis * au.micron / 1000
+        elif units == 'um':
+            formatted_axis = axis * au.micron
+        elif units in ['cm-1', 'wavenumber']:
+            # wavenumber == kayser == k
+            # https://docs.astropy.org/en/stable/units/ref_api.html#module-astropy.units
+            formatted_axis = axis * au.cgs.k
+
+        # prep data
+        sample_list = list(metadata['pkey'])
+        meta_dict = dict()
+        meta_cols = ['pkey', 'orig_pkey', 'method','parameter','method+param','RMSD']
+        spectra_dict = {'wave':axis}
+
+        # smoothing params
+        param_dict = {
+            'trapezoid':widths_trapezoid_running_avg,
+            'running_avg':widths_trapezoid_running_avg,
+            'savgol':widths_savgol,
+            'gaussian':widths_gaussian
+        }
+
+        if methods is None:
+            method_answer = input(f'Which of the following smoothing method(s) should be applied? Separate choices with a space\n\ttrapezoid\trunning_avg\tsavgol\tgaussian')
+            methods = method_answer.split(' ')
+            # make sure options within the list
+            for x in methods:
+                assert x in param_dict.keys()
+        elif methods == ['all']:
+            methods = list(param_dict.keys())
+
+        for sample in tqdm(sample_list):
+            intensities = np.array(spectra[sample])
+            formatted_intensities = intensities * au.dimensionless_unscaled
+            spectrum = Spectrum(spectral_axis=formatted_axis, 
+                                flux=formatted_intensities)
+            # add original spectrum
+            meta_dict[sample] = [sample, 
+                                 'original', 
+                                 np.nan, 
+                                 'original', 
+                                 np.nan]
+            spectra_dict[sample]=intensities
+
+            for method in methods:
+                params = param_dict[method]
+                for param in params:
+                    if method=='trapezoid':
+                        smoothed_spectrum = list(trapezoid_smooth(spectrum, width=param).flux.value)
+                    elif method=='running_avg':
+                        smoothed_spectrum = list(box_smooth(spectrum, width=param).flux.value)
+                    elif method=='savgol':
+                        smoothed_spectrum = list(savgol_filter(intensities, window_length=param, polyorder=2))
+                    elif method=='gaussian':
+                        smoothed_spectrum = list(gaussian_filter1d(intensities, param))
+            
+                    if method in ['trapezoid','running_avg']:
+                        window_width=max(params)
+                        smoothed_spectrum_fixed = Smooth.fix_box_smoothed_edges(intensities, 
+                                                                                smoothed_spectrum, 
+                                                                                param)
+                        # if (sample == sample_list[0]) and (do_plots is True): # just an example
+                        #     Smooth.edge_comparison_plot(method, 
+                        #                                 sample,
+                        #                                 axis, 
+                        #                                 units, 
+                        #                                 intensities, 
+                        #                                 smoothed_spectrum, 
+                        #                                 smoothed_spectrum_fixed, 
+                        #                                 param, 
+                        #                                 window_width, 
+                        #                                 export=export_plots, 
+                        #                                 show=show_plots)
+                        smoothed_spectrum = smoothed_spectrum_fixed.copy()
+            
+                    rmsd = float(Smooth.get_rmsd(intensities,smoothed_spectrum))
+                    if do_plots:
+                        Smooth.comparison_plot(method, 
+                                                sample, 
+                                                axis, 
+                                                units, 
+                                                intensities, 
+                                                smoothed_spectrum, 
+                                                param, 
+                                                rmsd, 
+                                                export=export_plots, 
+                                                show=show_plots)
+                    
+                    # update data
+                    pkey = f'{sample}_{method}_{param}'
+                    meta_dict[pkey] = [sample,
+                                       method, 
+                                       param, 
+                                       f'{method}_{param}', 
+                                       rmsd]
+                    spectra_dict[pkey]=smoothed_spectrum.copy()
+
+        smoothed_meta = pd.DataFrame.from_dict(meta_dict).T.reset_index()
+        smoothed_meta.columns = meta_cols
+        # add run info columns from original meta
+        smoothed_meta = (metadata
+                         .rename(columns={'pkey': 'orig_pkey'})
+                         .merge(smoothed_meta, how='right', on='orig_pkey'))
+        smoothed_spectra = pd.DataFrame.from_dict(spectra_dict)
+        assert list(smoothed_meta['pkey']) == list(smoothed_spectra.columns[1:])
+
+        return smoothed_spectra, smoothed_meta
+    

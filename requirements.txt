@@ -1,5 +1,6 @@
+BaselineRemoval==0.1.6
 jupyter
-matplotlib==3.8.1
+matplotlib==3.11.12
 numpy==1.26.1
 openpyxl
 pandas==3.0.6
