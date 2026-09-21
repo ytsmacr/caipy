@@ -1584,6 +1584,7 @@ class Smooth:
                     do_plots=False,
                     show_plots=False,
                     export_plots=False,
+                    export_folder=None,
                     widths_trapezoid_running_avg=[100, 50],
                     widths_savgol=[50, 100, 150],
                     widths_gaussian=[10, 25, 50]):
@@ -1689,6 +1690,7 @@ class Smooth:
                                                 smoothed_spectrum, 
                                                 param, 
                                                 rmsd, 
+                                                export_folder=export_folder,
                                                 export=export_plots, 
                                                 show=show_plots)
                     

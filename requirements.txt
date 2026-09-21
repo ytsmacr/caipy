@@ -1,11 +1,11 @@
 BaselineRemoval==0.1.6
 jupyter
-matplotlib==3.11.12
+matplotlib==3.11.2
 numpy==1.26.1
 openpyxl
 pandas==3.0.6
 seaborn==0.13.2
 scikit_learn==1.9.1
-scipy==1.11.3
+scipy
 specutils==2.4.0
 tqdm==4.66.1
