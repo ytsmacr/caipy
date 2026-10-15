@@ -7,6 +7,7 @@ from sklearn.metrics import mean_squared_error, r2_score
 from statistics import mean, median
 from tqdm import tqdm
 import os, numbers
+import math
 import matplotlib.pyplot as plt 
 import matplotlib.cm as cm
 plt.set_loglevel('error')
@@ -39,7 +40,7 @@ ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '.'))
 
 '''
 by Cai Ytsma (cai@caiconsulting.co.uk)
-Last updated 19 September 2026
+Last updated 15 October 2026
 
 Standalone functions and classes used by other programs in caipy.
 
@@ -613,6 +614,22 @@ class Preprocess:
         # extract the band value per spectrum
         return normed_spectra
 
+    @staticmethod
+    def max_norm(spectra:pd.DataFrame, fillna=True):
+        # normalize the spectra to the maximum value of each spectrum
+        normed_spectra = spectra.copy()
+        normed_spectra = normed_spectra.set_index('wave').T
+        normed_spectra.insert(0,'max_value',normed_spectra.max(axis=1))
+        normed_spectra = (
+            normed_spectra
+            .div(normed_spectra['max_value'], axis=0) # normalize
+            .T # restructure
+            .drop(index='max_value') # remove reference col
+        ) 
+        normed_spectra.reset_index(inplace=True)
+        if fillna:
+            normed_spectra = normed_spectra.fillna(0)
+        return normed_spectra
 
     # make common norms more streamlined
     @staticmethod
@@ -742,6 +759,42 @@ class Preprocess:
         normed_spectra = Preprocess.normalize_regions(df_list)
 
         return normed_spectra
+
+    '''
+    SQUASHING
+    '''
+    def _scalar_sqrt(x):
+        if pd.isna(x) or x < 0:
+            return np.nan # Handle NaN and negative numbers
+        return math.sqrt(x)
+
+    def _scalar_sigmoid(x):
+        if pd.isna(x):
+            return np.nan  # Handle NaN
+        return (1 - math.cos(math.pi * x)) / 2
+
+    @staticmethod
+    def squash_sqrt(spectra, fillna=True):
+        # fills NaN values with 0 by default
+        assert isinstance(spectra, pd.DataFrame), "Input must be a pandas DataFrame"
+        assert 'wave' in spectra.columns, "DataFrame must contain a 'wave' column"
+
+        s = spectra.set_index('wave').map(Preprocess._scalar_sqrt).reset_index()
+        if fillna:
+            s = s.fillna(0)
+
+        return s 
+
+    @staticmethod
+    def squash_sigmoid(spectra, fillna=True):
+        assert isinstance(spectra, pd.DataFrame), "Input must be a pandas DataFrame"
+        assert 'wave' in spectra.columns, "DataFrame must contain a 'wave' column"
+
+        s = spectra.set_index('wave').map(Preprocess._scalar_sigmoid).reset_index()
+        if fillna:
+            s = s.fillna(0)
+
+        return s
 
 ##########################################
 
